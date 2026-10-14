@@ -1461,10 +1461,10 @@ index 0000000..a3a9d65
 +}
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
 new file mode 100644
-index 0000000..e029ff4
+index 0000000..2d9aba6
 --- /dev/null
 +++ b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
-@@ -0,0 +1,168 @@
+@@ -0,0 +1,172 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -1559,7 +1559,11 @@ index 0000000..e029ff4
 +            if (getGuidanceStylist().getDescriptionView() != null) {
 +                getGuidanceStylist().getDescriptionView().setText(text);
 +            }
-+            if (stateChanged) setActions(actionsFor(u.state()));
++            if (stateChanged) {
++                setActions(actionsFor(u.state()));
++                // Keep the D-pad on the main action (setActions would leave it on "Later").
++                setSelectedActionPosition(0);
++            }
 +        }
 +
 +        private List<GuidedAction> actionsFor(Updater.State state) {
