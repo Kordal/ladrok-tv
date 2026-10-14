@@ -1,0 +1,19 @@
+diff --git a/TvSampleLeanbackLauncher/src/main/AndroidManifest.xml b/TvSampleLeanbackLauncher/src/main/AndroidManifest.xml
+index 070967b..1312791 100644
+--- a/TvSampleLeanbackLauncher/src/main/AndroidManifest.xml
++++ b/TvSampleLeanbackLauncher/src/main/AndroidManifest.xml
+@@ -24,6 +24,14 @@
+ 
+     <uses-feature android:name="android.software.leanback" android:required="true" />
+ 
++    <!-- Package visibility (Android 11+): needed to see installed TV apps -->
++    <queries>
++        <intent>
++            <action android:name="android.intent.action.MAIN" />
++            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
++        </intent>
++    </queries>
++
+     <application
+         android:allowBackup="true"
+         android:icon="@mipmap/ic_launcher"

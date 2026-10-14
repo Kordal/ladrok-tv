@@ -1,0 +1,36 @@
+diff --git a/core/Makefile b/core/Makefile
+index 092c187..938a430 100644
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -6861,7 +6861,7 @@ ifdef BOARD_CUSTOM_BOOTIMG
+ 	@# Prebuilt boot images
+ 	$(hide) mkdir -p $(zip_root)/BOOTABLE_IMAGES
+ 	$(hide) $(ACP) $(INSTALLED_BOOTIMAGE_TARGET) $(zip_root)/BOOTABLE_IMAGES/
+-	$(hide) $(ACP) $(INSTALLED_RECOVERYIMAGE_TARGET) $(zip_root)/BOOTABLE_IMAGES/
++	$(if $(INSTALLED_RECOVERYIMAGE_TARGET),$(hide) $(ACP) $(INSTALLED_RECOVERYIMAGE_TARGET) $(zip_root)/BOOTABLE_IMAGES/)
+ endif
+ ifdef BUILDING_SYSTEM_IMAGE
+ 	@# Contents of the system image
+diff --git a/tools/releasetools/ota_from_target_files.py b/tools/releasetools/ota_from_target_files.py
+old mode 100755
+new mode 100644
+index add76ef..6e5f10a
+--- a/tools/releasetools/ota_from_target_files.py
++++ b/tools/releasetools/ota_from_target_files.py
+@@ -578,6 +578,16 @@ def ModifyTargetFilesDynamicPartitionInfo(input_file, key, value):
+   Returns:
+     The path to modified target-files.zip
+   """
++  # Plain (non-dynamic-partition) A/B builds have no dynamic partition info:
++  # nothing to modify.
++  if os.path.isdir(input_file):
++    if not os.path.exists(os.path.join(input_file, *DYNAMIC_PARTITION_INFO.split("/"))):
++      return input_file
++  else:
++    with zipfile.ZipFile(input_file, 'r', allowZip64=True) as zfp:
++      if DYNAMIC_PARTITION_INFO not in zfp.namelist():
++        return input_file
++
+   if os.path.isdir(input_file):
+     dynamic_partition_info_path = os.path.join(
+         input_file, *DYNAMIC_PARTITION_INFO.split("/"))

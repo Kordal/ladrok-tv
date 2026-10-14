@@ -1,0 +1,21 @@
+# Large / re-downloadable artifacts
+*.img
+*.apk
+*.odex
+*.vdex
+downloads/
+backups/
+tools/platform-tools/
+tools/*.bak
+
+# Scratch
+*.png
+.claude/
+
+# OTA signing private key (back it up elsewhere; never commit)
+keys/
+*.pk8
+*.key
+releases/
+!public/*.png
+!docs/*.png
