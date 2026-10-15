@@ -23,8 +23,8 @@ done
 # bump its URL and SHA256 lines together.
 LAUNCHER_URL=https://github.com/Kordal/ladrok-start/releases/download/v0.2.0/LadrokLauncher.apk
 LAUNCHER_SHA256=0fd64f83abc439444ea66cd7da55b459c8dd2c2553e87f1e4cbb887990860b64
-STORE_URL=https://github.com/Kordal/ladrok-store/releases/download/v0.1.0/LadrokStore.apk
-STORE_SHA256=8f72bad6d7e8f7ff7ae1a0a4c8d5667350ef9f3b0e749993ced2ba73742e0de3
+STORE_URL=https://github.com/Kordal/ladrok-store/releases/download/v0.1.1/LadrokStore.apk
+STORE_SHA256=08e1190cc6ac4b92aa678eec44344670e0109cdaaf4bf1fb585d4857286fbf3b
 
 sha() { [ -f "$1" ] && sha256sum "$1" | cut -d' ' -f1; }
 # prebuilt NAME URL SHA256: download the APK to device/brcm/rpi5/NAME/NAME.apk unless it is already there.
