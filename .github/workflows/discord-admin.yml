@@ -41,6 +41,8 @@ jobs:
           set -o pipefail
           python3 .github/discord/admin.py "$MODE" | tee discord-plan.txt
           { echo '```'; cat discord-plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # Also as an annotation, so the output is readable through the checks API.
+          echo "::notice title=Discord $MODE::$(sed -e 's/%/%25/g' -e 's/::/: /g' discord-plan.txt | sed ':a;N;$!ba;s/\n/%0A/g')"
       - name: Post plan on the PR
         if: github.event_name == 'pull_request'
         env:
