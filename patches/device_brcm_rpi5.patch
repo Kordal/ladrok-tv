@@ -20,6 +20,57 @@ index 89cbc00..8d3252a 100644
  
  # Manifest
  DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := $(DEVICE_PATH)/framework_compatibility_matrix.xml
+diff --git a/LadrokLauncher/.gitignore b/LadrokLauncher/.gitignore
+new file mode 100644
+index 0000000..8068b9c
+--- /dev/null
++++ b/LadrokLauncher/.gitignore
+@@ -0,0 +1,2 @@
++# Downloaded by scripts/apply-patches.sh (ladrok-tv repo)
++LadrokLauncher.apk
+diff --git a/LadrokLauncher/Android.bp b/LadrokLauncher/Android.bp
+new file mode 100644
+index 0000000..a2c544f
+--- /dev/null
++++ b/LadrokLauncher/Android.bp
+@@ -0,0 +1,23 @@
++//
++// SPDX-License-Identifier: Apache-2.0
++//
++// Ladrok Launcher, the home screen (github.com/Kordal/ladrok-start). Built and signed there;
++// scripts/apply-patches.sh in the ladrok-tv repo downloads the pinned release APK next to this
++// file and checks its SHA-256. Replaces TvSampleLeanbackLauncher.
++
++prebuilt_etc {
++    name: "default_permissions_tv.ladrok.launcher",
++    system_ext_specific: true,
++    sub_dir: "default-permissions",
++    src: "tv.ladrok.launcher.xml",
++    filename_from_src: true,
++}
++
++android_app_import {
++    name: "LadrokLauncher",
++    apk: "LadrokLauncher.apk",
++    presigned: true,
++    system_ext_specific: true,
++    overrides: ["TvSampleLeanbackLauncher"],
++    required: ["default_permissions_tv.ladrok.launcher"],
++}
+diff --git a/LadrokLauncher/tv.ladrok.launcher.xml b/LadrokLauncher/tv.ladrok.launcher.xml
+new file mode 100644
+index 0000000..52080af
+--- /dev/null
++++ b/LadrokLauncher/tv.ladrok.launcher.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Granted at first boot so the Launcher shows Watch Next and Channels without asking. -->
++<exceptions>
++    <exception package="tv.ladrok.launcher">
++        <permission name="android.permission.READ_TV_LISTINGS" fixed="false"/>
++    </exception>
++</exceptions>
 diff --git a/LadrokSetup/Android.bp b/LadrokSetup/Android.bp
 new file mode 100644
 index 0000000..784fe49
@@ -2197,17 +2248,21 @@ index 0000000..c4b1b91
 +    </privapp-permissions>
 +</permissions>
 diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
-index 999ee18..67d42a5 100644
+index 999ee18..ae1eb68 100644
 --- a/aosp_rpi5_tv.mk
 +++ b/aosp_rpi5_tv.mk
-@@ -19,17 +19,24 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
+@@ -19,17 +19,27 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
  PRODUCT_PACKAGES += \
      DocumentsUI \
      LeanbackIME \
 -    TvProvision \
-     TvSampleLeanbackLauncher \
+-    TvSampleLeanbackLauncher \
      TvSettingsTwoPanel
  
++# Home screen (Ladrok Launcher, prebuilt); replaces TvSampleLeanbackLauncher
++PRODUCT_PACKAGES += \
++    LadrokLauncher
++
 +# First-boot setup (language, country/Wi-Fi regulatory domain, time zone); replaces TvProvision
 +PRODUCT_PACKAGES += \
 +    LadrokSetup
@@ -2228,7 +2283,7 @@ index 999ee18..67d42a5 100644
  
  # Keylayout
  PRODUCT_PACKAGES += \
-@@ -48,5 +55,5 @@ PRODUCT_PACKAGES += \
+@@ -48,5 +58,5 @@ PRODUCT_PACKAGES += \
  PRODUCT_DEVICE := rpi5
  PRODUCT_NAME := aosp_rpi5_tv
  PRODUCT_BRAND := Raspberry
