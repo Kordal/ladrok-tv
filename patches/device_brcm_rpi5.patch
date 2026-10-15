@@ -789,6 +789,58 @@ index 0000000..d38fcb0
 +        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
 +    </privapp-permissions>
 +</permissions>
+diff --git a/LadrokStore/.gitignore b/LadrokStore/.gitignore
+new file mode 100644
+index 0000000..2077b67
+--- /dev/null
++++ b/LadrokStore/.gitignore
+@@ -0,0 +1,2 @@
++# Downloaded by scripts/apply-patches.sh (ladrok-tv repo)
++LadrokStore.apk
+diff --git a/LadrokStore/Android.bp b/LadrokStore/Android.bp
+new file mode 100644
+index 0000000..e43e672
+--- /dev/null
++++ b/LadrokStore/Android.bp
+@@ -0,0 +1,23 @@
++//
++// SPDX-License-Identifier: Apache-2.0
++//
++// Ladrok Store, the app store (github.com/Kordal/ladrok-store). Built and signed there;
++// scripts/apply-patches.sh in the ladrok-tv repo downloads the pinned release APK next to this
++// file and checks its SHA-256. Privileged, so it installs and updates its Apps without asking.
++
++prebuilt_etc {
++    name: "privapp_whitelist_tv.ladrok.store",
++    system_ext_specific: true,
++    sub_dir: "permissions",
++    src: "tv.ladrok.store.xml",
++    filename_from_src: true,
++}
++
++android_app_import {
++    name: "LadrokStore",
++    apk: "LadrokStore.apk",
++    presigned: true,
++    privileged: true,
++    system_ext_specific: true,
++    required: ["privapp_whitelist_tv.ladrok.store"],
++}
+diff --git a/LadrokStore/tv.ladrok.store.xml b/LadrokStore/tv.ladrok.store.xml
+new file mode 100644
+index 0000000..07434da
+--- /dev/null
++++ b/LadrokStore/tv.ladrok.store.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Install, update and remove the Store's Apps without a confirmation each time. -->
++<permissions>
++    <privapp-permissions package="tv.ladrok.store">
++        <permission name="android.permission.DELETE_PACKAGES"/>
++        <permission name="android.permission.INSTALL_PACKAGES"/>
++    </privapp-permissions>
++</permissions>
 diff --git a/LadrokUpdater/Android.bp b/LadrokUpdater/Android.bp
 new file mode 100644
 index 0000000..5236599
@@ -2251,7 +2303,7 @@ diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
 index 999ee18..ae1eb68 100644
 --- a/aosp_rpi5_tv.mk
 +++ b/aosp_rpi5_tv.mk
-@@ -19,17 +19,27 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
+@@ -19,17 +19,31 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
  PRODUCT_PACKAGES += \
      DocumentsUI \
      LeanbackIME \
@@ -2270,6 +2322,10 @@ index 999ee18..ae1eb68 100644
 +# System updates (A/B OTA from GitHub Releases through update_engine)
 +PRODUCT_PACKAGES += \
 +    LadrokUpdater
++
++# App store (Ladrok Store, prebuilt, privileged): curated TV apps from GitHub releases
++PRODUCT_PACKAGES += \
++    LadrokStore
 +
  # Bluetooth
  PRODUCT_VENDOR_PROPERTIES += \
@@ -28756,3 +28812,13 @@ index 0000000..8086ba4
 +# The device runs SELinux permissive (androidboot.selinux=permissive); keep this
 +# one-shot block-device tool permissive too rather than spelling out raw disk access.
 +permissive rpi_resize_data;
+diff --git a/sepolicy/app.te b/sepolicy/app.te
+new file mode 100644
+index 0000000..1f0e3a2
+--- /dev/null
++++ b/sepolicy/app.te
+@@ -0,0 +1,4 @@
++# audioserver hands every AudioTrack a shared-memory buffer (memfd:MemoryHeapBase) labelled
++# audioserver_tmpfs. Without this, enforcing SELinux denies the app's write, createTrack fails
++# with "Could not get control block" and the app plays no sound (seen with Nuvio).
++allow appdomain audioserver_tmpfs:file { getattr map read write };
