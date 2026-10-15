@@ -4,21 +4,35 @@
 
 Android TV (AOSP 17) for the **Raspberry Pi 5**, based on [raspberry-vanilla](https://github.com/raspberry-vanilla) (KonstaKANG's AOSP device trees), with:
 
-- **A quiet home screen**: [Ladrok Launcher](https://github.com/Kordal/ladrok-start). Watch Next and the Channels you pick on the left, your apps as a phone-style keypad on the right (digits 1–9 open them).
-- **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps from their GitHub releases (and F-Droid), installed and kept up to date without prompts.
 - **First-boot setup**: language, country and time zone, using the TV remote. The country sets the Wi-Fi regulatory domain, so 5 GHz channels work. Nothing is hard-coded to a region.
 - **Over-the-air updates (A/B)**: the system updates in the background while you keep watching. A signed package is installed into the inactive slot by `update_engine`, then the TV restarts into it. If the new version doesn't start, the Pi firmware boots the previous one again.
+- **A quiet home screen**: [Ladrok Launcher](https://github.com/Kordal/ladrok-start).
+  - On the left: Watch Next and the Channels you pick.
+  - On the right: your apps as a phone-style keypad. The digits 1–9 open them.
+  - Every release ships the newest Launcher, and the TV keeps it up to date between system updates.
+- **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps from their GitHub releases (and F-Droid), installed and kept up to date without prompts.
 - **/data fills the card**: on first boot, the user data partition grows to the end of the SD card.
+- **Hardened**: SELinux enforcing, and everything is signed with this project's own release keys rather than the public AOSP test keys.
 
-This is a hobby project: a `userdebug` build with SELinux permissive. It is tested on a Pi 5 (8 GB) booting from an SD card into a 1080p TV over HDMI.
+This is a hobby project. It is tested on a Pi 5 (8 GB) booting from an SD card into a 1080p TV over HDMI.
 
 ## Install
 
-1. Download `ladrok-tv-<date>.img.xz` from the [latest release](../../releases/latest) when one is attached, or build it yourself (see below).
+You need an SD card of **32 GB or more**. The image holds two copies of the system (A/B), about 16.5 GB.
+
+1. From the [latest release](../../releases/latest), download `ladrok-tv-<version>-user.img.xz`. Optionally, check it against the `.sha256` file next to it.
 2. Write it with [Raspberry Pi Imager](https://www.raspberrypi.com/software/): *Choose OS → Use custom*. Choose **No** when it offers OS customisation. This erases the card.
 3. Boot the Pi. Pick your language, country and time zone, then connect to Wi-Fi in Settings.
 
-After that, updates arrive through **Settings → About → System update**, also listed as *System update* among the apps. The TV checks once a day, downloads in the background, and asks before installing and before restarting.
+After that, updates arrive through **Settings → About → System update**. The TV checks once a day, downloads in the background, and asks before installing and before restarting.
+
+Releases come in two variants:
+- **`user`** is for everyone.
+- **`userdebug`** is for development: it has root over adb, and on it `setenforce 0` relaxes SELinux until the next restart.
+
+A TV only installs updates of its own variant.
+
+**Upgrading from a release before v20261015.1718:** those used a smaller partition layout (system 3 GB per slot), which an update can't change. Write the new card image instead; this erases the TV's apps and settings.
 
 ## How updates work
 
@@ -26,7 +40,7 @@ After that, updates arrive through **Settings → About → System update**, als
  SD card (GPT)
  p1  bootsel     FAT: only autoboot.txt (which slot the firmware boots)
  p2  rpiboot_a   FAT: kernel, ramdisk, config.txt, cmdline_a/b.txt   ┐ slot A
- p5  system_a    p7 vendor_a                                         ┘
+ p5  system_a    p7 vendor_a       (6 GB + 1 GB per slot: layout 2)  ┘
  p3  rpiboot_b   p6 system_b   p8 vendor_b                             slot B
  p4  misc        slot metadata
  p9  metadata    p10 userdata
@@ -39,8 +53,18 @@ After that, updates arrive through **Settings → About → System update**, als
   - `markBootSuccessful()` runs after a good boot of the new slot and makes that slot the `[all]` default.
   - A crash, a panic (`panic=10`), or a power cut before that point leaves the old slot as the default.
   - `autoboot.txt` has a fixed size of 512 bytes and is rewritten in place, one sector at a time, so the FAT itself never changes.
-- **Update packages** are normal AOSP A/B OTA zips (`ota_from_target_files`). They are published as GitHub release assets together with an `update.json` (version, SHA-256, payload offset/size/properties). The updater app (`LadrokUpdater`) downloads both and hands the payload to `update_engine`.
-- **Signing**: the device only trusts `device/brcm/rpi5/security/ota.x509.pem`. The stock `otacerts.zip`, which also contains the public AOSP test key, is replaced with a bind mount at boot. The private key is not in this repository.
+- **Update packages** are normal AOSP A/B OTA zips (`ota_from_target_files`).
+  - They are published as GitHub release assets, together with one `update-<variant>.json` per variant: version, layout, launcher version, SHA-256, and the payload offset, size and properties.
+  - The updater app (`LadrokUpdater`) reads the file for its own variant, downloads the package and hands the payload to `update_engine`.
+  - It refuses a release with a different partition `layout`, because that needs a new card image.
+- **Signing**:
+  - The device only trusts `device/brcm/rpi5/security/ota.x509.pem`. The stock `otacerts.zip`, which also contains the public AOSP test key, is replaced with a bind mount at boot.
+  - Apps and APEX modules are re-signed with release keys by `tools/sign-target-files.sh`.
+  - None of the private keys are in this repository.
+- **Launcher and Store**:
+  - Ladrok Launcher and Ladrok Store are built in their own repositories and included as prebuilt APKs.
+  - `scripts/fetch-prebuilts.sh` downloads the newest release of each at build time. It only accepts APKs signed with their pinned certificate.
+  - Between system updates, `LadrokUpdater` installs newer Launcher releases that carry the same certificate.
 
 ## Build from source
 
@@ -59,25 +83,34 @@ Flash it with Raspberry Pi Imager. On Windows you can also run `scripts\flash-sd
 
 If you build your own images, use **your own** update key and release repository. Otherwise devices running your build would accept updates from this project.
 
-1. Create a key:
+1. Create the keys:
    ```bash
    mkdir -p ~/ladrok-keys && cd ~/ladrok-keys
    openssl genrsa -out ota.key 4096
    openssl req -new -x509 -sha256 -key ota.key -out ota.x509.pem -days 10950 -subj '/CN=my OTA key'
    openssl pkcs8 -in ota.key -topk8 -outform DER -out ota.pk8 -nocrypt
    cp ota.x509.pem ~/aosp-rpi/device/brcm/rpi5/security/ota.x509.pem
+   bash tools/make-release-keys.sh   # app and APEX release keys into ~/ladrok-keys/release
    ```
    Back up `~/ladrok-keys`. Without it, devices running your build can only be updated by reflashing.
 2. Set `release_repo` in `device/brcm/rpi5/LadrokUpdater/res/values/strings.xml` to your `owner/repo`.
-3. Build a release with `bash scripts/make-ota.sh`. It writes a signed `ladrok-tv-ota-<timestamp>.zip` plus `update.json`. Attach both files to a GitHub release, and devices will pick it up within a day.
+3. Build both variants of a release:
+   ```bash
+   export BUILD_NUMBER=$(date +%Y%m%d.%H%M)
+   VARIANT=userdebug bash scripts/make-ota.sh --image
+   VARIANT=user bash scripts/make-ota.sh --image
+   ```
+   For each variant this writes the OTA zip, `update-<variant>.json` and, with `--image`, the `.img.xz` card image with its `.sha256`.
+   Attach all of them to one GitHub release, and devices will pick it up within a day.
 
 ## Repository layout
 
 | Path | What |
 |---|---|
-| `patches/` | Changes to the AOSP tree, one patch per project (`device/brcm/rpi5`, `device/google/atv`, `build/make`) |
-| `scripts/` | sync, apply/export patches, build, `mkimg-ab.sh` (card image), `make-ota.sh` (signed OTA), flash scripts |
-| `tools/` | `connect.ps1` (wireless adb via mDNS), `ab-status.sh` (slot and tryboot state on the device), `test-fallback.sh` (rollback test), `ota-sideload.ps1` (install an OTA over adb), `make-release-image.sh` (`.img.xz` for a release), `make-logo-assets.py` (boot animation and icons from the logo) |
+| `patches/` | Changes to the AOSP tree, one patch per project (`device/brcm/rpi5`, `device/google/atv`, `build/make`, `system/sepolicy`) |
+| `.github/` | Release announcements on Discord, and the Discord server's settings (`discord/server.json`) |
+| `scripts/` | sync, apply/export patches, `fetch-prebuilts.sh` (Launcher and Store APKs), build, `mkimg-ab.sh` (card image), `make-ota.sh` (signed release: OTA, update config, card image), flash scripts |
+| `tools/` | `make-release-keys.sh` and `sign-target-files.sh` (release signing), `connect.ps1` (wireless adb via mDNS), `ab-status.sh` (slot and tryboot state on the device), `test-fallback.sh` (rollback test), `ota-sideload.ps1` (install an OTA over adb), `make-logo-assets.py` (boot animation and icons from the logo) |
 | `docs/` | The logo (`ladrok-logo-source.png` is the original artwork) |
 
 ## Credits and license

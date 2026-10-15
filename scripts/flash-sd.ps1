@@ -4,12 +4,14 @@
 #   .\scripts\flash-sd.ps1                                   -> lists candidate disks, writes nothing
 #   .\scripts\flash-sd.ps1 -DiskNumber 3 -DryRun             -> all safety checks, writes nothing
 #   .\scripts\flash-sd.ps1 -DiskNumber 3                     -> back up the card, write, verify
-#   -Image <path> picks the image (default: newest ladrok-tv-*.img in the repo root); -NoBackup skips it.
+#   -Image <path> picks the image (default: newest ladrok-tv-*.img in the repo root; .img.xz works too);
+#   -NoBackup skips the backup; -Force accepts a card without a Pi layout (e.g. half-written by Imager).
 param(
     [int]$DiskNumber = -1,
     [string]$Image,
     [switch]$DryRun,
     [switch]$NoBackup,
+    [switch]$Force,
     [switch]$Yes
 )
 $ErrorActionPreference = 'Stop'
@@ -57,6 +59,7 @@ try {
     $opts = @('--image', (Get-WslPath $Image), '--disk-size', "$($disk.Size)")
     if ($DryRun) { $opts += '--dry-run' }
     if ($NoBackup) { $opts += '--no-backup' }
+    if ($Force) { $opts += '--force' }
     wsl -u root -e bash $flasher @opts
     if ($LASTEXITCODE) { throw 'flash-image.sh failed; see output above.' }
 }

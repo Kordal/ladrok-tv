@@ -1,0 +1,43 @@
+diff --git a/private/property_contexts b/private/property_contexts
+index 0bd43ef..91e545c 100644
+--- a/private/property_contexts
++++ b/private/property_contexts
+@@ -1146,6 +1146,38 @@ ro.build.version.release_or_codename      u:object_r:build_prop:s0 exact string
+ ro.build.version.sdk                      u:object_r:build_prop:s0 exact int
+ ro.build.version.security_patch           u:object_r:build_prop:s0 exact string
+ 
++# Ladrok TV: build properties this AOSP 17 tree writes without a context. They fell back to
++# default_prop / vendor_default_prop, which most domains may not read (seen as denials from
++# gralloc, composer, mediacodec, surfaceflinger, apps), so label them like their siblings.
++ro.build.uuid                                u:object_r:build_prop:s0 exact string
++ro.build.version.sdk_full                    u:object_r:build_prop:s0 exact string
++ro.build.version.known_codenames             u:object_r:build_prop:s0 exact string
++ro.build.version.release_or_preview_display  u:object_r:build_prop:s0 exact string
++ro.system.build.uuid                         u:object_r:build_prop:s0 exact string
++ro.system.build.version.sdk_full             u:object_r:build_prop:s0 exact string
++ro.system.product.cpu.abilist                u:object_r:build_prop:s0 exact string
++ro.system.product.cpu.abilist32              u:object_r:build_prop:s0 exact string
++ro.system.product.cpu.abilist64              u:object_r:build_prop:s0 exact string
++ro.system_ext.build.uuid                     u:object_r:build_prop:s0 exact string
++ro.system_ext.build.version.sdk_full         u:object_r:build_prop:s0 exact string
++ro.product.build.uuid                        u:object_r:build_prop:s0 exact string
++ro.product.build.version.sdk_full            u:object_r:build_prop:s0 exact string
++ro.odm.build.id                              u:object_r:build_odm_prop:s0 exact string
++ro.odm.build.tags                            u:object_r:build_odm_prop:s0 exact string
++ro.odm.build.type                            u:object_r:build_odm_prop:s0 exact string
++ro.odm.build.uuid                            u:object_r:build_odm_prop:s0 exact string
++ro.odm.build.version.release                 u:object_r:build_odm_prop:s0 exact string
++ro.odm.build.version.release_or_codename     u:object_r:build_odm_prop:s0 exact string
++ro.odm.build.version.sdk                     u:object_r:build_odm_prop:s0 exact int
++ro.odm.build.version.sdk_full                u:object_r:build_odm_prop:s0 exact string
++ro.odm.product.cpu.abilist                   u:object_r:build_odm_prop:s0 exact string
++ro.odm.product.cpu.abilist32                 u:object_r:build_odm_prop:s0 exact string
++ro.odm.product.cpu.abilist64                 u:object_r:build_odm_prop:s0 exact string
++ro.vendor.build.uuid                         u:object_r:build_vendor_prop:s0 exact string
++ro.vendor.build.version.sdk_full             u:object_r:build_vendor_prop:s0 exact string
++ro.vendor_dlkm.build.uuid                    u:object_r:build_vendor_prop:s0 exact string
++ro.vendor_dlkm.build.version.sdk_full        u:object_r:build_vendor_prop:s0 exact string
++
+ ro.actionable_compatible_property.enabled u:object_r:build_prop:s0 exact bool
+ 
+ 

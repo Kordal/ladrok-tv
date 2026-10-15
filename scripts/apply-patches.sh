@@ -8,6 +8,7 @@ declare -A PROJECTS=(
   [device/brcm/rpi5]=device_brcm_rpi5.patch
   [device/google/atv]=device_google_atv.patch
   [build/make]=build_make.patch
+  [system/sepolicy]=system_sepolicy.patch
 )
 for p in "${!PROJECTS[@]}"; do
   f="$DIR/${PROJECTS[$p]}"
@@ -19,26 +20,5 @@ for p in "${!PROJECTS[@]}"; do
   fi
 done
 
-# Prebuilt Ladrok apps, built and signed in their own repos. Each is pinned to one release:
-# bump its URL and SHA256 lines together.
-LAUNCHER_URL=https://github.com/Kordal/ladrok-start/releases/download/v0.2.0/LadrokLauncher.apk
-LAUNCHER_SHA256=0fd64f83abc439444ea66cd7da55b459c8dd2c2553e87f1e4cbb887990860b64
-STORE_URL=https://github.com/Kordal/ladrok-store/releases/download/v0.1.1/LadrokStore.apk
-STORE_SHA256=08e1190cc6ac4b92aa678eec44344670e0109cdaaf4bf1fb585d4857286fbf3b
-
-sha() { [ -f "$1" ] && sha256sum "$1" | cut -d' ' -f1; }
-# prebuilt NAME URL SHA256: download the APK to device/brcm/rpi5/NAME/NAME.apk unless it is already there.
-prebuilt() {
-  local apk="$SRC/device/brcm/rpi5/$1/$1.apk"
-  if [ "$(sha "$apk")" != "$3" ]; then
-    curl -fsSL -o "$apk.part" "$2"
-    if [ "$(sha "$apk.part")" != "$3" ]; then
-      echo "$1: SHA-256 mismatch for $2" >&2
-      rm -f "$apk.part"; exit 1
-    fi
-    mv "$apk.part" "$apk"
-  fi
-  echo "$1: $(basename "$(dirname "$2")")"
-}
-prebuilt LadrokLauncher "$LAUNCHER_URL" "$LAUNCHER_SHA256"  # the home screen, github.com/Kordal/ladrok-start
-prebuilt LadrokStore "$STORE_URL" "$STORE_SHA256"           # the app store, github.com/Kordal/ladrok-store
+# Ladrok Launcher and Ladrok Store: newest release APKs (prebuilts, signed in their own repos)
+SRC=$SRC bash "$(dirname "$0")/fetch-prebuilts.sh"

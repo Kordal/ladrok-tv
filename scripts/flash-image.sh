@@ -7,7 +7,7 @@
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
-IMAGE= DEV= DISK_SIZE= DRY=0 BACKUP=1
+IMAGE= DEV= DISK_SIZE= DRY=0 BACKUP=1 FORCE=0
 BACKUP_DIR=$REPO/backups/$(date +%Y%m%d-%H%M%S)
 
 while [ $# -gt 0 ]; do
@@ -16,6 +16,7 @@ while [ $# -gt 0 ]; do
     --device) DEV=$2; shift ;;
     --disk-size) DISK_SIZE=$2; shift ;;
     --dry-run) DRY=1 ;;
+    --force) FORCE=1 ;;
     --no-backup) BACKUP=0 ;;
     --backup-dir) BACKUP_DIR=$2; shift ;;
     *) echo "unknown option $1"; exit 2 ;;
@@ -43,11 +44,22 @@ if [ "$(label LABEL "$(part 3)")" = userdata ] && [ "$(label LABEL "$(part 7)")"
   layout="old MBR (raspberry-vanilla)"
 elif [ "$(label PARTLABEL "$(part 1)")" = bootsel ] && [ "$(label PARTLABEL "$(part 10)")" = userdata ]; then
   layout="A/B GPT (Ladrok TV)"
+elif [ $FORCE = 1 ]; then
+  # e.g. a card another tool (Raspberry Pi Imager) already started to overwrite
+  layout="unknown (--force)"
 else
-  die "$DEV does not look like the Pi card (no userdata/metadata labels); refusing"
+  die "$DEV does not look like the Pi card (no userdata/metadata labels); refusing (--force to override)"
 fi
 
-isz=$(stat -c %s "$IMAGE"); dsz=$(blockdev --getsize64 "$DEV")
+# .img.xz (release download) is decompressed on the fly; its size comes from the xz index
+if [[ $IMAGE == *.xz ]]; then
+  isz=$(xz --robot -l "$IMAGE" | awk '$1 == "totals" {print $5}')
+  src() { xz -dc "$IMAGE"; }
+else
+  isz=$(stat -c %s "$IMAGE")
+  src() { cat "$IMAGE"; }
+fi
+dsz=$(blockdev --getsize64 "$DEV")
 [ "$isz" -le "$dsz" ] || die "image ($isz bytes) is larger than the card ($dsz bytes)"
 echo "Card:  $DEV, $((dsz / 1000000000)) GB, layout: $layout"
 echo "Image: $IMAGE ($((isz / 1048576)) MiB)"
@@ -62,8 +74,8 @@ if [ $BACKUP = 1 ]; then
 fi
 
 echo "Writing image..."
-dd if="$IMAGE" of="$DEV" bs=4M conv=fsync status=progress
+src | dd of="$DEV" bs=4M iflag=fullblock conv=fsync status=progress
 sync
 echo "Verifying..."
-cmp -n "$isz" "$IMAGE" "$DEV" || die "verify failed"
+src | cmp -n "$isz" - "$DEV" || die "verify failed"
 echo "FLASH OK: $DEV now holds $(basename "$IMAGE")"
