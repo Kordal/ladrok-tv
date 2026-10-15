@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: discord-admin
@@ -36,4 +37,14 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           MODE: ${{ github.event_name == 'pull_request' && 'plan' || github.event_name == 'push' && 'apply' || inputs.mode }}
-        run: python3 .github/discord/admin.py "$MODE"
+        run: |
+          set -o pipefail
+          python3 .github/discord/admin.py "$MODE" | tee discord-plan.txt
+          { echo '```'; cat discord-plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Post plan on the PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          { echo '### Discord plan'; echo '```'; cat discord-plan.txt; echo '```'; } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} -R ${{ github.repository }} --body-file comment.md --edit-last --create-if-none
