@@ -28812,3 +28812,13 @@ index 0000000..8086ba4
 +# The device runs SELinux permissive (androidboot.selinux=permissive); keep this
 +# one-shot block-device tool permissive too rather than spelling out raw disk access.
 +permissive rpi_resize_data;
+diff --git a/sepolicy/app.te b/sepolicy/app.te
+new file mode 100644
+index 0000000..1f0e3a2
+--- /dev/null
++++ b/sepolicy/app.te
+@@ -0,0 +1,4 @@
++# audioserver hands every AudioTrack a shared-memory buffer (memfd:MemoryHeapBase) labelled
++# audioserver_tmpfs. Without this, enforcing SELinux denies the app's write, createTrack fails
++# with "Could not get control block" and the app plays no sound (seen with Nuvio).
++allow appdomain audioserver_tmpfs:file { getattr map read write };
