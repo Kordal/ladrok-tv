@@ -19,18 +19,26 @@ for p in "${!PROJECTS[@]}"; do
   fi
 done
 
-# Ladrok Launcher: the home screen, built and signed in github.com/Kordal/ladrok-start.
-# Pinned to one release; bump both lines together.
+# Prebuilt Ladrok apps, built and signed in their own repos. Each is pinned to one release:
+# bump its URL and SHA256 lines together.
 LAUNCHER_URL=https://github.com/Kordal/ladrok-start/releases/download/v0.2.0/LadrokLauncher.apk
 LAUNCHER_SHA256=0fd64f83abc439444ea66cd7da55b459c8dd2c2553e87f1e4cbb887990860b64
-apk="$SRC/device/brcm/rpi5/LadrokLauncher/LadrokLauncher.apk"
+STORE_URL=https://github.com/Kordal/ladrok-store/releases/download/v0.1.0/LadrokStore.apk
+STORE_SHA256=8f72bad6d7e8f7ff7ae1a0a4c8d5667350ef9f3b0e749993ced2ba73742e0de3
+
 sha() { [ -f "$1" ] && sha256sum "$1" | cut -d' ' -f1; }
-if [ "$(sha "$apk")" != "$LAUNCHER_SHA256" ]; then
-  curl -fsSL -o "$apk.part" "$LAUNCHER_URL"
-  if [ "$(sha "$apk.part")" != "$LAUNCHER_SHA256" ]; then
-    echo "LadrokLauncher: SHA-256 mismatch for $LAUNCHER_URL" >&2
-    rm -f "$apk.part"; exit 1
+# prebuilt NAME URL SHA256: download the APK to device/brcm/rpi5/NAME/NAME.apk unless it is already there.
+prebuilt() {
+  local apk="$SRC/device/brcm/rpi5/$1/$1.apk"
+  if [ "$(sha "$apk")" != "$3" ]; then
+    curl -fsSL -o "$apk.part" "$2"
+    if [ "$(sha "$apk.part")" != "$3" ]; then
+      echo "$1: SHA-256 mismatch for $2" >&2
+      rm -f "$apk.part"; exit 1
+    fi
+    mv "$apk.part" "$apk"
   fi
-  mv "$apk.part" "$apk"
-fi
-echo "LadrokLauncher: $(basename "$(dirname "$LAUNCHER_URL")")"
+  echo "$1: $(basename "$(dirname "$2")")"
+}
+prebuilt LadrokLauncher "$LAUNCHER_URL" "$LAUNCHER_SHA256"  # the home screen, github.com/Kordal/ladrok-start
+prebuilt LadrokStore "$STORE_URL" "$STORE_SHA256"           # the app store, github.com/Kordal/ladrok-store
