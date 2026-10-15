@@ -1,0 +1,41 @@
+# Announces each published release in the #ladrok-tv Discord channel, posted by the Ladrok Admin bot.
+# Needs repo secrets DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID.
+name: Announce release on Discord
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  notify:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          CHANNEL: ${{ secrets.DISCORD_CHANNEL_ID }}
+          NAME: ${{ github.event.release.name || github.event.release.tag_name }}
+          URL: ${{ github.event.release.html_url }}
+          BODY: ${{ github.event.release.body }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHANNEL" ]; then
+            echo "::error::DISCORD_BOT_TOKEN or DISCORD_CHANNEL_ID secret is missing"
+            exit 1
+          fi
+          # Discord caps embed descriptions at 4096 characters.
+          jq -n --arg name "$NAME" --arg url "$URL" --arg body "${BODY:0:3500}" '{
+            embeds: [{
+              title: ($name + " is out"),
+              url: $url,
+              description: (if $body == "" then "New release available." else $body end),
+              color: 13619151
+            }],
+            allowed_mentions: { parse: [] }
+          }' | curl -fsS -o /dev/null \
+                 -H "Content-Type: application/json" \
+                 -H "Authorization: Bot $BOT_TOKEN" \
+                 -d @- \
+                 "https://discord.com/api/v10/channels/$CHANNEL/messages"
