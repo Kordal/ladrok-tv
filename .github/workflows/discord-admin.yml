@@ -1,0 +1,50 @@
+# Keeps the Ladrok Discord server in line with .github/discord/server.json, using the Ladrok Admin bot.
+# A pull request that touches .github/discord prints the server's state and a plan; merging to main applies it.
+# Run it by hand from the Actions tab to inspect (plan) or re-apply.
+# Needs repo secret DISCORD_BOT_TOKEN.
+name: Discord admin
+
+on:
+  pull_request:
+    paths: ['.github/discord/**', '.github/workflows/discord-admin.yml']
+  push:
+    branches: [main]
+    paths: ['.github/discord/**', '.github/workflows/discord-admin.yml']
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: plan only shows changes; apply makes them
+        type: choice
+        options: [plan, apply]
+        default: plan
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: discord-admin
+  cancel-in-progress: false
+
+jobs:
+  discord:
+    # Fork PRs get no secrets; skip them instead of failing.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ${{ github.event_name == 'pull_request' && 'Plan' || 'Apply' }}
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          MODE: ${{ github.event_name == 'pull_request' && 'plan' || github.event_name == 'push' && 'apply' || inputs.mode }}
+        run: |
+          set -o pipefail
+          python3 .github/discord/admin.py "$MODE" | tee discord-plan.txt
+          { echo '```'; cat discord-plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Post plan on the PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          { echo '### Discord plan'; echo '```'; cat discord-plan.txt; echo '```'; } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} -R ${{ github.repository }} --body-file comment.md --edit-last --create-if-none

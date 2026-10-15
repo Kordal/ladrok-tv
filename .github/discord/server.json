@@ -1,0 +1,17 @@
+{
+	"$comment": "Desired state of the Ladrok Discord server. A PR that changes this file posts a plan; merging to main applies it. {#name} becomes a channel mention.",
+	"channels": {
+		"announcements": {
+			"topic": "Releases and news from Ladrok. Read-only. Everything else lives at https://ladrok.com"
+		},
+		"general": {
+			"topic": "Talk about Ladrok and simple software. Help and bugs go in the project's own channel."
+		},
+		"ladrok-tv": {
+			"topic": "Ladrok TV: Android TV for the Raspberry Pi 5, quiet home screen, no clutter. Help, bugs, ideas. New releases post here automatically."
+		}
+	},
+	"pins": {
+		"announcements": "# Ladrok\n**Bring back the simplicity of software.**\nSmall, quiet open source tools that work out of the box.\n\n**Minimal config.** Sensible defaults. Little to set up.\n**Minimal UI.** Only what you need, nothing that shouts.\n**Yours.** Local-first, open source, no accounts.\n\n**Built with AI.** Every Ladrok project is. If that bothers you, no hard feelings. If it doesn't, the code is open: judge the result.\n\n**Where to go**\n{#general} talk about anything Ladrok\n{#ladrok-tv} Ladrok TV help, bugs and releases\n\nProjects: <https://ladrok.com>\nCode: <https://github.com/Kordal>"
+	}
+}
