@@ -19,3 +19,4 @@ keys/
 releases/
 !public/*.png
 !docs/*.png
+__pycache__/

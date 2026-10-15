@@ -34,3 +34,19 @@ index add76ef..6e5f10a
    if os.path.isdir(input_file):
      dynamic_partition_info_path = os.path.join(
          input_file, *DYNAMIC_PARTITION_INFO.split("/"))
+diff --git a/tools/releasetools/sign_target_files_apks.py b/tools/releasetools/sign_target_files_apks.py
+old mode 100755
+new mode 100644
+index 2429021..8598928
+--- a/tools/releasetools/sign_target_files_apks.py
++++ b/tools/releasetools/sign_target_files_apks.py
+@@ -2017,6 +2017,9 @@ def main(argv):
+ 
+   input_zip = zipfile.ZipFile(args[0], "r", allowZip64=True)
+   misc_info = common.LoadInfoDict(input_zip)
++  # Builds without AVB (BOARD_AVB_ENABLE unset) don't record avbtool, but APEX payloads are
++  # still signed with it.
++  misc_info.setdefault("avb_avbtool", "avbtool")
+   if OPTIONS.package_key is None:
+       OPTIONS.package_key = misc_info.get(
+           "default_system_dev_certificate",

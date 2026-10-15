@@ -10,6 +10,7 @@ declare -A PROJECTS=(
   [device/brcm/rpi5]=device_brcm_rpi5.patch
   [device/google/atv]=device_google_atv.patch
   [build/make]=build_make.patch
+  [system/sepolicy]=system_sepolicy.patch
 )
 for p in "${!PROJECTS[@]}"; do
   # intent-to-add so new (untracked) files show up in the diff too

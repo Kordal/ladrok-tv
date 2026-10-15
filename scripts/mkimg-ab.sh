@@ -6,17 +6,23 @@
 #   p2  rpiboot_a  128M  FAT32 = boot.img (kernel, dtbs, ramdisk, config.txt, cmdline_*.txt)
 #   p3  rpiboot_b  128M  empty until the first OTA
 #   p4  misc         1M  slot metadata (libboot_control)
-#   p5  system_a     3G  system.img
-#   p6  system_b     3G  empty
-#   p7  vendor_a   384M  vendor.img
-#   p8  vendor_b   384M  empty
+#   p5  system_a     6G  system.img
+#   p6  system_b     6G  empty
+#   p7  vendor_a     1G  vendor.img
+#   p8  vendor_b     1G  empty
 #   p9  metadata    16M  ext4
 #   p10 userdata     1G  ext4; rpi_resize_data grows it to the end of the card on first boot
 #
 # The firmware's boot_partition numbers (autoboot.txt, config.txt filters) are these GPT
 # entry numbers, so keep the order in sync with device/brcm/rpi5/boot/config.txt and the
-# boot control HAL (SlotPartition()).
+# boot control HAL (SlotPartition()). This is layout 2 (LadrokUpdater res/values/config.xml,
+# layout_version); partition sizes must match BOARD_*IMAGE_PARTITION_SIZE in BoardConfig.mk.
 set -euo pipefail
+
+# After envsetup/lunch, AOSP's own host sgdisk (out/host/linux-x86/bin) shadows the system
+# one on PATH and does not take -a / -i the same way. Always use the gdisk package's.
+SGDISK=${SGDISK:-/usr/sbin/sgdisk}
+sgdisk() { "$SGDISK" "$@"; }
 
 OUT=${OUT:-$HOME/aosp-rpi/out/target/product/rpi5}
 IMG=${1:-$OUT/ladrok-tv-$(date +%Y%m%d).img}
@@ -32,10 +38,10 @@ PARTS=( "bootsel    64    0700"
         "rpiboot_a  128   0700"
         "rpiboot_b  128   0700"
         "misc       1     8300"
-        "system_a   3072  8300"
-        "system_b   3072  8300"
-        "vendor_a   384   8300"
-        "vendor_b   384   8300"
+        "system_a   6144  8300"
+        "system_b   6144  8300"
+        "vendor_a   1024  8300"
+        "vendor_b   1024  8300"
         "metadata   16    8300"
         "userdata   1024  8300" )
 

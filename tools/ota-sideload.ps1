@@ -1,13 +1,17 @@
 # Install an OTA release (from scripts/make-ota.sh) on the Pi over adb, without the updater app.
-# Usage: .\tools\ota-sideload.ps1 -Release D:\path\to\releases\<ts>   [-Reboot]
-# Pushes the zip to /data/ota_package and runs update_engine_client with update.json's values.
+# Usage: .\tools\ota-sideload.ps1 -Release D:\path\to\releases\<version> [-Variant userdebug|user] [-Reboot]
+# Pushes the zip to /data/ota_package and runs update_engine_client with update-<variant>.json's
+# values. (Releases before 2026-10-15 have a single update.json, which is used if present.)
 param(
     [Parameter(Mandatory)][string]$Release,
+    [string]$Variant = 'userdebug',
     [switch]$Reboot
 )
 $ErrorActionPreference = 'Stop'
 $adb = Join-Path $PSScriptRoot 'platform-tools\adb.exe'
-$cfg = Get-Content (Join-Path $Release 'update.json') -Raw | ConvertFrom-Json
+$json = Join-Path $Release "update-$Variant.json"
+if (-not (Test-Path $json)) { $json = Join-Path $Release 'update.json' }
+$cfg = Get-Content $json -Raw | ConvertFrom-Json
 $zip = Join-Path $Release $cfg.file
 if ((Get-Item $zip).Length -ne $cfg.size) { throw "$zip does not match update.json" }
 
