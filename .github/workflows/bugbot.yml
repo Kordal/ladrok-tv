@@ -1,0 +1,33 @@
+name: Claude BugBot
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bugbot:
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    env:
+      # The action has no effort input; Claude Code reads this from the env,
+      # which the action passes through to the claude CLI.
+      CLAUDE_CODE_EFFORT_LEVEL: high
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Full history enables BugBot's git-history lens; the repo is small.
+          fetch-depth: 0
+
+      - name: Run Claude BugBot
+        # v1.0.14
+        uses: rekpero/claude-bugbot-github-action@8eedc356796c3b6e73a2d2288fe10643702b8bfb
+        with:
+          claude-setup-token: ${{ secrets.CLAUDE_SETUP_TOKEN }}
+          model: claude-opus-5-5
+          # Optional PAT for auto-resolving fixed threads; falls back to the job token.
+          github-token: ${{ secrets.GH_PAT || github.token }}
