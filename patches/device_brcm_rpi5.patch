@@ -29384,6 +29384,7 @@ index 80957cc..78e7428 100644
 +allow system_server tmpfs:file { read write map };
 diff --git a/sepolicy_system_ext/audioserver.te b/sepolicy_system_ext/audioserver.te
 new file mode 100644
+index 0000000..d658aa1
 --- /dev/null
 +++ b/sepolicy_system_ext/audioserver.te
 @@ -0,0 +1,7 @@
