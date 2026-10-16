@@ -28,12 +28,16 @@ $headers = ($cfg.payload_properties -join "`n")
 $script = @"
 F=/data/ota_package/$($cfg.file)
 chown system:cache `$F; chmod 644 `$F; chcon u:object_r:ota_package_file:s0 `$F
-update_engine_client --update --follow --payload=file://`$F --offset=$($cfg.payload_offset) --size=$($cfg.payload_size) --headers="$headers" 2>&1 | grep -vE 'DOWNLOADING|VERIFYING|FINALIZING' | tail -3
+update_engine_client --update --follow --payload=file://`$F --offset=$($cfg.payload_offset) --size=$($cfg.payload_size) --headers="$headers" > /data/local/tmp/ota-sideload.log 2>&1
+grep -vE 'DOWNLOADING|VERIFYING|FINALIZING' /data/local/tmp/ota-sideload.log | tail -3
 /vendor/bin/rpi_tryboot status
+# Only a completed install may lead to a reboot
+grep -q 'onPayloadApplicationComplete(ErrorCode::kSuccess' /data/local/tmp/ota-sideload.log
 "@
 $tmp = New-TemporaryFile
 [IO.File]::WriteAllText($tmp, $script.Replace("`r`n", "`n"))
 & $adb -s $s push $tmp /data/local/tmp/ota-sideload.sh | Out-Null
 Remove-Item $tmp
 & $adb -s $s shell sh /data/local/tmp/ota-sideload.sh
+if ($LASTEXITCODE) { throw 'update_engine did not finish the install; not rebooting (log: /data/local/tmp/ota-sideload.log)' }
 if ($Reboot) { & $adb -s $s reboot; Write-Host 'Rebooting into the new slot.' }
