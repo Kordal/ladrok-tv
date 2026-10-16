@@ -61,13 +61,16 @@ new file mode 100644
 index 0000000..42c14fa
 --- /dev/null
 +++ b/LadrokLauncher/Android.bp
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,46 @@
 +//
 +// SPDX-License-Identifier: Apache-2.0
 +//
 +// Ladrok Launcher (https://github.com/Kordal/ladrok-start): the home screen of Ladrok TV.
 +// Built with Gradle in its own repo and signed there; scripts/fetch-prebuilts.sh in the drot repo
 +// downloads the newest release APK (checked against the pinned signing certificate) into this directory.
++// Privileged, so it can read what any App's player is playing (MEDIA_CONTENT_CONTROL) for its
++// Continue card. A privileged permission the Launcher starts asking for must be added to
++// tv.ladrok.launcher.xml first, or the system refuses to boot.
 +
 +prebuilt_etc {
 +    name: "default_permissions_tv.ladrok.launcher",
@@ -77,12 +80,21 @@ index 0000000..42c14fa
 +    filename_from_src: true,
 +}
 +
++prebuilt_etc {
++    name: "privapp_whitelist_tv.ladrok.launcher",
++    system_ext_specific: true,
++    sub_dir: "permissions",
++    src: "tv.ladrok.launcher.xml",
++    filename_from_src: true,
++}
++
 +android_app_import {
 +    name: "LadrokLauncher",
 +    apk: "LadrokLauncher.apk",
 +    presigned: true,
 +    // Signed with APK signature v2+, so the build must leave the file untouched
 +    preprocessed: true,
++    privileged: true,
 +    system_ext_specific: true,
 +    // Declared by androidx.window in the manifest; neither exists on a TV
 +    optional_uses_libs: [
@@ -91,7 +103,10 @@ index 0000000..42c14fa
 +    ],
 +    // The only home app, so there is no "choose a launcher" prompt
 +    overrides: ["TvSampleLeanbackLauncher"],
-+    required: ["default_permissions_tv.ladrok.launcher"],
++    required: [
++        "default_permissions_tv.ladrok.launcher",
++        "privapp_whitelist_tv.ladrok.launcher",
++    ],
 +}
 diff --git a/LadrokLauncher/default-permissions-tv.ladrok.launcher.xml b/LadrokLauncher/default-permissions-tv.ladrok.launcher.xml
 new file mode 100644
@@ -107,6 +122,20 @@ index 0000000..39f3d5d
 +        <permission name="android.permission.READ_TV_LISTINGS" fixed="false" />
 +    </exception>
 +</exceptions>
+diff --git a/LadrokLauncher/tv.ladrok.launcher.xml b/LadrokLauncher/tv.ladrok.launcher.xml
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/LadrokLauncher/tv.ladrok.launcher.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- What any App's player is playing (media sessions), for the Launcher's Continue card. -->
++<permissions>
++    <privapp-permissions package="tv.ladrok.launcher">
++        <permission name="android.permission.MEDIA_CONTENT_CONTROL"/>
++    </privapp-permissions>
++</permissions>
 diff --git a/LadrokSetup/Android.bp b/LadrokSetup/Android.bp
 new file mode 100644
 index 0000000..784fe49

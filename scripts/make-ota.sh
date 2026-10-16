@@ -58,7 +58,7 @@ lunch aosp_rpi5_tv-cp2a-$VARIANT >/dev/null
 make target-files-package otatools -j$(nproc)
 HOSTBIN=$AOSP/${OUT_DIR:-out}/host/linux-x86/bin
 # The prebuilts in the image must carry their own signature (presigned, never re-signed)
-for apk in app/LadrokLauncher/LadrokLauncher.apk priv-app/LadrokStore/LadrokStore.apk; do
+for apk in priv-app/LadrokLauncher/LadrokLauncher.apk priv-app/LadrokStore/LadrokStore.apk; do
   bash "$REPO/scripts/fetch-prebuilts.sh" --check "$ANDROID_PRODUCT_OUT/system/system_ext/$apk"
 done
 
