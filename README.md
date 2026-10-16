@@ -10,7 +10,7 @@ Android TV (AOSP 17) for the **Raspberry Pi 5**, based on [raspberry-vanilla](ht
   - On the left: Watch Next and the Channels you pick.
   - On the right: your apps as a phone-style keypad. The digits 1–9 open them.
   - Every release ships the newest Launcher, and the TV keeps it up to date between system updates.
-- **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps from their GitHub releases (and F-Droid), installed and kept up to date without prompts.
+- **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps (such as Nuvio, Stremio, Jellyfin and Tailscale) from their GitHub releases, F-Droid or the vendor's download page. It is built in as a privileged system app, so it installs and updates apps without prompts. Automatic updates can be switched off in the Store.
 - **/data fills the card**: on first boot, the user data partition grows to the end of the SD card.
 - **Hardened**: SELinux enforcing, and everything is signed with this project's own release keys rather than the public AOSP test keys.
 
@@ -24,7 +24,7 @@ You need an SD card of **32 GB or more**. The image holds two copies of the syst
 2. Write it with [Raspberry Pi Imager](https://www.raspberrypi.com/software/): *Choose OS → Use custom*. Choose **No** when it offers OS customisation. This erases the card.
 3. Boot the Pi. Pick your language, country and time zone, then connect to Wi-Fi in Settings.
 
-After that, updates arrive through **Settings → About → System update**. The TV checks once a day, downloads in the background, and asks before installing and before restarting.
+After that, updates arrive through **Settings → Device Preferences → About → System update**. The TV checks once a day, downloads in the background, and asks before installing and before restarting.
 
 Releases come in two variants:
 - **`user`** is for everyone.
@@ -62,9 +62,9 @@ A TV only installs updates of its own variant.
   - Apps and APEX modules are re-signed with release keys by `tools/sign-target-files.sh`.
   - None of the private keys are in this repository.
 - **Launcher and Store**:
-  - Ladrok Launcher and Ladrok Store are built in their own repositories and included as prebuilt APKs.
+  - Ladrok Launcher and Ladrok Store are built in their own repositories and included as prebuilt APKs. The Store is a privileged app (`priv-app`), so its installs need no confirmation.
   - `scripts/fetch-prebuilts.sh` downloads the newest release of each at build time. It only accepts APKs signed with their pinned certificate.
-  - Between system updates, `LadrokUpdater` installs newer Launcher releases that carry the same certificate.
+  - Between system updates, `LadrokUpdater` installs newer Launcher releases that carry the same certificate. The Store itself is updated with the system; the apps it offers come from its catalog, which changes without a system update.
 
 ## Build from source
 
@@ -73,9 +73,11 @@ You need Linux, or WSL2 on Windows, with Ubuntu 24.04, about 400 GB of free disk
 ```bash
 git clone https://github.com/Kordal/ladrok-tv && cd ladrok-tv
 bash scripts/sync.sh            # AOSP 17 + raspberry-vanilla manifests into ~/aosp-rpi (shallow)
-bash scripts/apply-patches.sh   # our changes, from patches/
-bash scripts/build.sh           # images + ladrok-tv-<date>.img (GPT, A/B) in the repo root
+bash scripts/apply-patches.sh   # our changes, from patches/, plus the newest Launcher and Store APKs
+bash scripts/build.sh           # userdebug images + ladrok-tv-<date>.img (GPT, A/B) in the repo root
 ```
+
+`build.sh` is for development: it isn't signed with release keys. Releases come from `scripts/make-ota.sh` (below). Use `scripts/build-images.sh` to build only the boot, system and vendor images.
 
 Flash it with Raspberry Pi Imager. On Windows you can also run `scripts\flash-sd.ps1` from an elevated PowerShell. It backs up the card, writes the image and verifies it.
 
@@ -103,12 +105,14 @@ If you build your own images, use **your own** update key and release repository
    For each variant this writes the OTA zip, `update-<variant>.json` and, with `--image`, the `.img.xz` card image with its `.sha256`.
    Attach all of them to one GitHub release, and devices will pick it up within a day.
 
+The official images are built the same way, on a local machine (WSL2). GitHub Actions doesn't build images.
+
 ## Repository layout
 
 | Path | What |
 |---|---|
 | `patches/` | Changes to the AOSP tree, one patch per project (`device/brcm/rpi5`, `device/google/atv`, `build/make`, `system/sepolicy`) |
-| `.github/` | Release announcements on Discord, and the Discord server's settings (`discord/server.json`) |
+| `.github/` | Claude BugBot review on pull requests (`bugbot.yml`, needs the `CLAUDE_SETUP_TOKEN` secret), release announcements on Discord, and the Discord server's settings (`discord/server.json`, applied by `discord-admin.yml`) |
 | `scripts/` | sync, apply/export patches, `fetch-prebuilts.sh` (Launcher and Store APKs), build, `mkimg-ab.sh` (card image), `make-ota.sh` (signed release: OTA, update config, card image), flash scripts |
 | `tools/` | `make-release-keys.sh` and `sign-target-files.sh` (release signing), `connect.ps1` (wireless adb via mDNS), `ab-status.sh` (slot and tryboot state on the device), `test-fallback.sh` (rollback test), `ota-sideload.ps1` (install an OTA over adb), `make-logo-assets.py` (boot animation and icons from the logo) |
 | `docs/` | The logo (`ladrok-logo-source.png` is the original artwork) |
