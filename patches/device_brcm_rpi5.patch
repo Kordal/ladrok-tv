@@ -58,7 +58,7 @@ index 0000000..e150a81
 +VERSION
 diff --git a/LadrokLauncher/Android.bp b/LadrokLauncher/Android.bp
 new file mode 100644
-index 0000000..42c14fa
+index 0000000..1c2356a
 --- /dev/null
 +++ b/LadrokLauncher/Android.bp
 @@ -0,0 +1,46 @@
@@ -124,7 +124,7 @@ index 0000000..39f3d5d
 +</exceptions>
 diff --git a/LadrokLauncher/tv.ladrok.launcher.xml b/LadrokLauncher/tv.ladrok.launcher.xml
 new file mode 100644
-index 0000000..1111111
+index 0000000..6d01648
 --- /dev/null
 +++ b/LadrokLauncher/tv.ladrok.launcher.xml
 @@ -0,0 +1,8 @@
@@ -2461,6 +2461,108 @@ index 999ee18..54ac0b4 100644
 -PRODUCT_MODEL := Pi 5
 +PRODUCT_MODEL := Ladrok TV
  PRODUCT_MANUFACTURER := Raspberry
+diff --git a/audio/include/core-impl/StreamPrimary.h b/audio/include/core-impl/StreamPrimary.h
+index aed7e25..311ba85 100644
+--- a/audio/include/core-impl/StreamPrimary.h
++++ b/audio/include/core-impl/StreamPrimary.h
+@@ -70,7 +70,13 @@ class StreamPrimary : public StreamAlsaMonoPipe {
+     static bool useStubStream(bool isInput,
+                               const ::aidl::android::media::audio::common::AudioDevice& device);
+ 
+-    bool isStubStreamOnWorker() const { return mCurrAlsaDeviceId == kStubDeviceId; }
++    // How often an output stream that fell back to the stub retries opening its ALSA device.
++    static constexpr int64_t kAlsaRetryIntervalNs = 1000000000;
++
++    bool isStubStreamOnWorker() const {
++        return mCurrAlsaDeviceId == kStubDeviceId || mAlsaUnavailable;
++    }
++    void retryAlsaOnWorker();
+ 
+     DriverStubImpl mStubDriver;
+     mutable std::mutex mLock;
+@@ -78,6 +84,10 @@ class StreamPrimary : public StreamAlsaMonoPipe {
+ 
+     // Used by the worker thread only.
+     AlsaDeviceId mCurrAlsaDeviceId = kStubDeviceId;
++    // The output ALSA device could not be opened (e.g. HDMI with the display off), so the stream
++    // plays into the stub driver and retries the device every 'kAlsaRetryIntervalNs'.
++    bool mAlsaUnavailable = false;
++    int64_t mNextAlsaRetryNs = 0;
+ };
+ 
+ class StreamInPrimary final : public StreamIn, public StreamPrimary, public StreamInHwGainHelper {
+diff --git a/audio/primary/StreamPrimary.cpp b/audio/primary/StreamPrimary.cpp
+index 164abfb..026db6b 100644
+--- a/audio/primary/StreamPrimary.cpp
++++ b/audio/primary/StreamPrimary.cpp
+@@ -71,6 +71,11 @@ StreamPrimary::StreamPrimary(StreamContext* context, const Metadata& metadata)
+ }
+ 
+ ::android::status_t StreamPrimary::standby() {
++    if (mAlsaUnavailable) {
++        // The next 'start' tries the ALSA device again.
++        mAlsaUnavailable = false;
++        return mStubDriver.standby();
++    }
+     return isStubStreamOnWorker() ? mStubDriver.standby() : StreamAlsaMonoPipe::standby();
+ }
+ 
+@@ -89,15 +94,45 @@ StreamPrimary::StreamPrimary(StreamContext* context, const Metadata& metadata)
+     if (isStub) {
+         return mStubDriver.start();
+     }
+-    RETURN_STATUS_IF_ERROR(StreamAlsaMonoPipe::start());
++    if (::android::status_t status = StreamAlsaMonoPipe::start(); status != ::android::OK) {
++        if (mIsInput) return status;
++        // HDMI audio can not be opened while the display is off or unplugged. A failed start
++        // would put the stream into the ERROR state for good (audioserver never reopens it),
++        // leaving every app without sound and without an audio clock. Play into the stub
++        // instead, at real-time pace, until the device can be opened again.
++        LOG(WARNING) << __func__ << ": opening ALSA device failed: " << status
++                     << ", using the stub driver until it is available";
++        mAlsaUnavailable = true;
++        mNextAlsaRetryNs = ::android::uptimeNanos() + kAlsaRetryIntervalNs;
++        return mStubDriver.start();
++    }
++    mAlsaUnavailable = false;
+     mStartTimeNs = ::android::uptimeNanos();
+     mFramesSinceStart = 0;
+     mSkipNextTransfer = false;
+     return ::android::OK;
+ }
+ 
++void StreamPrimary::retryAlsaOnWorker() {
++    if (const int64_t now = ::android::uptimeNanos(); now < mNextAlsaRetryNs) {
++        return;
++    } else if (StreamAlsaMonoPipe::start() != ::android::OK) {
++        mNextAlsaRetryNs = now + kAlsaRetryIntervalNs;
++        return;
++    }
++    LOG(INFO) << __func__ << ": ALSA device is available again";
++    mStubDriver.standby();
++    mAlsaUnavailable = false;
++    mStartTimeNs = ::android::uptimeNanos();
++    mFramesSinceStart = 0;
++    mSkipNextTransfer = false;
++}
++
+ ::android::status_t StreamPrimary::transfer(void* buffer, size_t frameCount,
+                                             size_t* actualFrameCount, int32_t* latencyMs) {
++    if (mAlsaUnavailable) {
++        retryAlsaOnWorker();
++    }
+     if (isStubStreamOnWorker()) {
+         return mStubDriver.transfer(buffer, frameCount, actualFrameCount, latencyMs);
+     }
+@@ -137,7 +172,7 @@ StreamPrimary::StreamPrimary(StreamContext* context, const Metadata& metadata)
+ ::android::status_t StreamPrimary::refinePosition(StreamDescriptor::Position* position) {
+     const bool refinePosition =
+             GetBoolProperty("persist.vendor.audio.refine_position", true);
+-    if (refinePosition) {
++    if (refinePosition && !mAlsaUnavailable) {
+         RETURN_STATUS_IF_ERROR(StreamAlsaBase::refinePosition(position));
+     }
+     return ::android::OK;
 diff --git a/boot/config.txt b/boot/config.txt
 index 7627818..214b866 100644
 --- a/boot/config.txt
@@ -29200,6 +29302,7 @@ index 0000000..d658aa1
 +typeattribute audioserver_tmpfs mlstrustedobject;
 diff --git a/sepolicy_system_ext/mediaextractor.te b/sepolicy_system_ext/mediaextractor.te
 new file mode 100644
+index 0000000..137922b
 --- /dev/null
 +++ b/sepolicy_system_ext/mediaextractor.te
 @@ -0,0 +1,8 @@
