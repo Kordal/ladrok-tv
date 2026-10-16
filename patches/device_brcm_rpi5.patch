@@ -29169,6 +29169,19 @@ index 0000000..d658aa1
 +# from MLS, as platform policy does for system_server_tmpfs and app_zygote_tmpfs.
 +# Platform policy, not vendor sepolicy/: audioserver_tmpfs is a platform-private type.
 +typeattribute audioserver_tmpfs mlstrustedobject;
+diff --git a/sepolicy_system_ext/mediaextractor.te b/sepolicy_system_ext/mediaextractor.te
+new file mode 100644
+--- /dev/null
++++ b/sepolicy_system_ext/mediaextractor.te
+@@ -0,0 +1,8 @@
++# mediaextractor hands MediaExtractor clients their samples in memfd:MediaBuffer buffers
++# labelled mediaextractor_tmpfs. Platform policy has no rule letting apps use them, and the
++# memfd is s0 while apps run with per-app MLS categories, so both TE and MLS deny it: the
++# app gets an empty buffer and aborts in BpMediaSource::readMultiple with
++# "MediaBuffer.cpp:145 CHECK(offset + length <= mSize) failed" (Stremio crashes on play).
++# Platform policy, not vendor sepolicy/: mediaextractor_tmpfs is a platform-private type.
++allow { appdomain -isolated_app_all -sdk_sandbox_all } mediaextractor_tmpfs:file { getattr map read write };
++typeattribute mediaextractor_tmpfs mlstrustedobject;
 diff --git a/vendor.prop b/vendor.prop
 index 37c5a94..8a7ca55 100644
 --- a/vendor.prop
