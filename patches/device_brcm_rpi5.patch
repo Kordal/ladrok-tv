@@ -136,6 +136,238 @@ index 0000000..6d01648
 +        <permission name="android.permission.MEDIA_CONTENT_CONTROL"/>
 +    </privapp-permissions>
 +</permissions>
+diff --git a/LadrokRemoteHelper/Android.bp b/LadrokRemoteHelper/Android.bp
+new file mode 100644
+index 0000000..19b3acc
+--- /dev/null
++++ b/LadrokRemoteHelper/Android.bp
+@@ -0,0 +1,39 @@
++//
++// SPDX-License-Identifier: Apache-2.0
++//
++// Lets a phone running Ladrok Remote (github.com/Kordal/ladrok-remote) be the TV's Bluetooth
++// remote. The Remote is a Bluetooth HID keyboard, and the TV's HID host only accepts incoming
++// HID connections from devices it has connected to itself. TV Settings has no Connect action,
++// so when a newly paired device offers HID, this makes that first connection.
++
++prebuilt_etc {
++    name: "default_permissions_tv.ladrok.remotehelper",
++    system_ext_specific: true,
++    sub_dir: "default-permissions",
++    src: "default-permissions-tv.ladrok.remotehelper.xml",
++    filename_from_src: true,
++}
++
++prebuilt_etc {
++    name: "privapp_whitelist_tv.ladrok.remotehelper",
++    system_ext_specific: true,
++    sub_dir: "permissions",
++    src: "tv.ladrok.remotehelper.xml",
++    filename_from_src: true,
++}
++
++android_app {
++    name: "LadrokRemoteHelper",
++    srcs: ["src/**/*.java"],
++    platform_apis: true,
++    system_ext_specific: true,
++    certificate: "platform",
++    privileged: true,
++    required: [
++        "default_permissions_tv.ladrok.remotehelper",
++        "privapp_whitelist_tv.ladrok.remotehelper",
++    ],
++    optimize: {
++        enabled: false,
++    },
++}
+diff --git a/LadrokRemoteHelper/AndroidManifest.xml b/LadrokRemoteHelper/AndroidManifest.xml
+new file mode 100644
+index 0000000..1e28a90
+--- /dev/null
++++ b/LadrokRemoteHelper/AndroidManifest.xml
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- No UI. Persistent, because Bluetooth sends ACTION_BOND_STATE_CHANGED and ACTION_UUID without
++     FLAG_RECEIVER_INCLUDE_BACKGROUND, so a manifest receiver would never get them: the
++     receiver is registered by RemoteHelperApp in the always-running process instead. -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++        package="tv.ladrok.remotehelper">
++
++    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
++    <uses-permission android:name="android.permission.BLUETOOTH_PRIVILEGED" />
++
++    <application
++            android:name=".RemoteHelperApp"
++            android:label="Ladrok Remote helper"
++            android:persistent="true"
++            android:allowBackup="false" />
++</manifest>
+diff --git a/LadrokRemoteHelper/default-permissions-tv.ladrok.remotehelper.xml b/LadrokRemoteHelper/default-permissions-tv.ladrok.remotehelper.xml
+new file mode 100644
+index 0000000..c3dd690
+--- /dev/null
++++ b/LadrokRemoteHelper/default-permissions-tv.ladrok.remotehelper.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Bluetooth sends bond and UUID broadcasts only to holders of BLUETOOTH_CONNECT, a runtime
++     permission; there is no UI to ask for it, so grant it at boot -->
++<exceptions>
++    <exception package="tv.ladrok.remotehelper">
++        <permission name="android.permission.BLUETOOTH_CONNECT" fixed="true" />
++    </exception>
++</exceptions>
+diff --git a/LadrokRemoteHelper/src/tv/ladrok/remotehelper/RemoteHelperApp.java b/LadrokRemoteHelper/src/tv/ladrok/remotehelper/RemoteHelperApp.java
+new file mode 100644
+index 0000000..77c17e4
+--- /dev/null
++++ b/LadrokRemoteHelper/src/tv/ladrok/remotehelper/RemoteHelperApp.java
+@@ -0,0 +1,129 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.remotehelper;
++
++import android.app.Application;
++import android.bluetooth.BluetoothAdapter;
++import android.bluetooth.BluetoothDevice;
++import android.bluetooth.BluetoothHidHost;
++import android.bluetooth.BluetoothManager;
++import android.bluetooth.BluetoothProfile;
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.content.SharedPreferences;
++import android.os.ParcelUuid;
++import android.util.Log;
++
++import java.util.HashSet;
++import java.util.Set;
++
++/**
++ * Makes the TV's HID host connect once to each newly paired device that offers HID, such as a
++ * phone running Ladrok Remote. The HID host rejects incoming connections from devices it has
++ * never connected to itself; after this first connection it keeps the device's HID details
++ * and accepts the device's own connections from then on, also after a reboot.
++ */
++public class RemoteHelperApp extends Application {
++    private static final String TAG = "LadrokRemoteHelper";
++    private static final ParcelUuid HID =
++            ParcelUuid.fromString("00001124-0000-1000-8000-00805f9b34fb");
++    // Addresses connected since they were paired; an address is removed when it is unpaired
++    private static final String PREFS = "connected";
++
++    private final Set<String> mPending = new HashSet<>();
++    private SharedPreferences mConnected;
++
++    @Override
++    public void onCreate() {
++        super.onCreate();
++        mConnected = getSharedPreferences(PREFS, MODE_PRIVATE);
++        IntentFilter filter = new IntentFilter();
++        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
++        filter.addAction(BluetoothDevice.ACTION_UUID);
++        // Sent by the Bluetooth app, not the system; both are protected broadcasts
++        registerReceiver(mReceiver, filter, Context.RECEIVER_EXPORTED);
++    }
++
++    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
++        @Override
++        public void onReceive(Context context, Intent intent) {
++            BluetoothDevice device =
++                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
++            if (device == null) return;
++            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(intent.getAction())) {
++                int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,
++                        BluetoothDevice.ERROR);
++                if (state == BluetoothDevice.BOND_NONE) {
++                    mConnected.edit().remove(device.getAddress()).apply();
++                } else if (state == BluetoothDevice.BOND_BONDED) {
++                    // The UUIDs usually come with pairing. If not, ACTION_UUID follows.
++                    if (device.getUuids() == null) {
++                        device.fetchUuidsWithSdp();
++                    } else {
++                        maybeConnect(device);
++                    }
++                }
++            } else if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
++                maybeConnect(device);
++            }
++        }
++    };
++
++    private void maybeConnect(BluetoothDevice device) {
++        String address = device.getAddress();
++        if (mConnected.contains(address) || mPending.contains(address)) return;
++        if (!hasHid(device.getUuids())) return;
++
++        BluetoothAdapter adapter = getSystemService(BluetoothManager.class).getAdapter();
++        if (adapter == null) return;
++        mPending.add(address);
++        boolean ok = adapter.getProfileProxy(this, new BluetoothProfile.ServiceListener() {
++            @Override
++            public void onServiceConnected(int profile, BluetoothProfile proxy) {
++                mPending.remove(address);
++                connect((BluetoothHidHost) proxy, device);
++                adapter.closeProfileProxy(BluetoothProfile.HID_HOST, proxy);
++            }
++
++            @Override
++            public void onServiceDisconnected(int profile) {
++                mPending.remove(address);
++            }
++        }, BluetoothProfile.HID_HOST);
++        if (!ok) {
++            mPending.remove(address);
++            Log.w(TAG, "No HID host proxy");
++        }
++    }
++
++    private void connect(BluetoothHidHost hid, BluetoothDevice device) {
++        String address = device.getAddress();
++        int state = hid.getConnectionState(device);
++        if (state != BluetoothProfile.STATE_DISCONNECTED) {
++            // Something else, such as TV Settings for a real remote, is already connecting it
++            Log.i(TAG, device + " already in HID state " + state);
++            mConnected.edit().putBoolean(address, true).apply();
++            return;
++        }
++        // Saves the policy and connects (HidHostService.setConnectionPolicy). Also resumes the
++        // device's own incoming connection if the stack is holding it for us.
++        if (hid.setConnectionPolicy(device, BluetoothProfile.CONNECTION_POLICY_ALLOWED)) {
++            Log.i(TAG, "Connecting HID host to " + device);
++            mConnected.edit().putBoolean(address, true).apply();
++        } else {
++            Log.w(TAG, "Could not connect HID host to " + device);
++        }
++    }
++
++    private static boolean hasHid(ParcelUuid[] uuids) {
++        if (uuids == null) return false;
++        for (ParcelUuid uuid : uuids) {
++            if (HID.equals(uuid)) return true;
++        }
++        return false;
++    }
++}
+diff --git a/LadrokRemoteHelper/tv.ladrok.remotehelper.xml b/LadrokRemoteHelper/tv.ladrok.remotehelper.xml
+new file mode 100644
+index 0000000..0a4b2ab
+--- /dev/null
++++ b/LadrokRemoteHelper/tv.ladrok.remotehelper.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- BluetoothHidHost.setConnectionPolicy, which connects the HID host -->
++<permissions>
++    <privapp-permissions package="tv.ladrok.remotehelper">
++        <permission name="android.permission.BLUETOOTH_PRIVILEGED"/>
++    </privapp-permissions>
++</permissions>
 diff --git a/LadrokSetup/Android.bp b/LadrokSetup/Android.bp
 new file mode 100644
 index 0000000..784fe49
@@ -2418,7 +2650,7 @@ diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
 index 999ee18..54ac0b4 100644
 --- a/aosp_rpi5_tv.mk
 +++ b/aosp_rpi5_tv.mk
-@@ -19,17 +19,31 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
+@@ -19,17 +19,35 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
  PRODUCT_PACKAGES += \
      DocumentsUI \
      LeanbackIME \
@@ -2442,6 +2674,10 @@ index 999ee18..54ac0b4 100644
 +PRODUCT_PACKAGES += \
 +    LadrokStore
 +
++# Lets a phone running Ladrok Remote be the TV's Bluetooth remote (makes the first HID connection)
++PRODUCT_PACKAGES += \
++    LadrokRemoteHelper
++
  # Bluetooth
  PRODUCT_VENDOR_PROPERTIES += \
      bluetooth.device.class_of_device=34,4,36
@@ -2454,7 +2690,7 @@ index 999ee18..54ac0b4 100644
  
  # Keylayout
  PRODUCT_PACKAGES += \
-@@ -48,5 +62,5 @@ PRODUCT_PACKAGES += \
+@@ -48,5 +66,5 @@ PRODUCT_PACKAGES += \
  PRODUCT_DEVICE := rpi5
  PRODUCT_NAME := aosp_rpi5_tv
  PRODUCT_BRAND := Raspberry
