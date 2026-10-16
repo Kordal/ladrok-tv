@@ -924,7 +924,7 @@ index 0000000..5236599
 +}
 diff --git a/LadrokUpdater/AndroidManifest.xml b/LadrokUpdater/AndroidManifest.xml
 new file mode 100644
-index 0000000..61d068e
+index 0000000..9ce1cae
 --- /dev/null
 +++ b/LadrokUpdater/AndroidManifest.xml
 @@ -0,0 +1,56 @@
@@ -1464,7 +1464,7 @@ index 0000000..42d062a
 +</vector>
 diff --git a/LadrokUpdater/res/values/config.xml b/LadrokUpdater/res/values/config.xml
 new file mode 100644
-index 0000000..2469c5f
+index 0000000..7545e69
 --- /dev/null
 +++ b/LadrokUpdater/res/values/config.xml
 @@ -0,0 +1,9 @@
@@ -1479,7 +1479,7 @@ index 0000000..2469c5f
 +</resources>
 diff --git a/LadrokUpdater/res/values/strings.xml b/LadrokUpdater/res/values/strings.xml
 new file mode 100644
-index 0000000..2d299d3
+index 0000000..3da43a2
 --- /dev/null
 +++ b/LadrokUpdater/res/values/strings.xml
 @@ -0,0 +1,38 @@
@@ -1625,7 +1625,7 @@ index 0000000..a3a9d65
 +}
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
 new file mode 100644
-index 0000000..2e7bf13
+index 0000000..2d9aba6
 --- /dev/null
 +++ b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
 @@ -0,0 +1,172 @@
@@ -1862,7 +1862,7 @@ index 0000000..a5d8719
 +}
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/UpdateService.java b/LadrokUpdater/src/tv/ladrok/updater/UpdateService.java
 new file mode 100644
-index 0000000..882b743
+index 0000000..d07f549
 --- /dev/null
 +++ b/LadrokUpdater/src/tv/ladrok/updater/UpdateService.java
 @@ -0,0 +1,215 @@
