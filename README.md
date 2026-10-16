@@ -11,6 +11,7 @@ Android TV (AOSP 17) for the **Raspberry Pi 5**, based on [raspberry-vanilla](ht
   - On the right: your apps as a phone-style keypad. The digits 1–9 open them.
   - Every release ships the newest Launcher, and Ladrok Store keeps it up to date between system updates.
 - **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps (such as Nuvio, Stremio, Jellyfin and Tailscale) from their GitHub releases, F-Droid or the vendor's download page. It is built in as a privileged system app, so it installs and updates apps without prompts. It is the TV's only app updater: it also updates itself and the Launcher. Automatic updates can be switched off in the Store.
+- **A phone as the remote**: Ladrok Remote on an Android phone pairs as a Bluetooth keyboard. The TV's HID host only accepts devices it has connected to itself, so a small built-in helper (`LadrokRemoteHelper`) makes that first connection after pairing.
 - **/data fills the card**: on first boot, the user data partition grows to the end of the SD card.
 - **Hardened**: SELinux enforcing, and everything is signed with this project's own release keys rather than the public AOSP test keys.
 
