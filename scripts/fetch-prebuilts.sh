@@ -16,7 +16,8 @@ APPS=(
   "LadrokStore Kordal/ladrok-store STORE_VERSION"         # the app store
 )
 # SHA-256 of the signing certificate both apps share (CN=Ladrok Launcher). Change only if that key
-# is rotated; LadrokUpdater's config.xml pins the same value for launcher updates between OS releases.
+# is rotated; Ladrok Store's catalog (catalog/apps.yaml in ladrok-store) pins the same value for
+# updates between OS releases.
 CERT_SHA256=00d9faeb7a77c0d3edcc6f9ba807b7061faa49fb6c60daf808dc79c9ee6ac43e
 SRC=${SRC:-${AOSP:-$HOME/aosp-rpi}}
 

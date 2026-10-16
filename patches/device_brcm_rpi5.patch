@@ -927,7 +927,7 @@ new file mode 100644
 index 0000000..61d068e
 --- /dev/null
 +++ b/LadrokUpdater/AndroidManifest.xml
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,56 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<!-- Runs as the system UID: that is what SELinux lets talk to update_engine and write
@@ -938,8 +938,6 @@ index 0000000..61d068e
 +
 +    <uses-permission android:name="android.permission.INTERNET" />
 +    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-+    <!-- Ladrok Launcher updates between system updates (LauncherUpdate) -->
-+    <uses-permission android:name="android.permission.INSTALL_PACKAGES" />
 +    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 +    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 +    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -1469,7 +1467,7 @@ new file mode 100644
 index 0000000..2469c5f
 --- /dev/null
 +++ b/LadrokUpdater/res/values/config.xml
-@@ -0,0 +1,16 @@
+@@ -0,0 +1,9 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
@@ -1478,20 +1476,13 @@ index 0000000..2469c5f
 +         1 = system 3 GB / vendor 384 MB per slot, 2 = system 6 GB / vendor 1 GB per slot.
 +         scripts/make-ota.sh reads the value from this file. -->
 +    <integer name="layout_version">2</integer>
-+
-+    <!-- Ladrok Launcher, the home screen: built into the image, and updated from its GitHub
-+         releases between system updates (LauncherUpdate). Empty launcher_repo disables that.
-+         The certificate digest must match scripts/fetch-prebuilts.sh (CERT_SHA256). -->
-+    <string name="launcher_repo" translatable="false">Kordal/ladrok-start</string>
-+    <string name="launcher_package" translatable="false">tv.ladrok.launcher</string>
-+    <string name="launcher_cert_sha256" translatable="false">00d9faeb7a77c0d3edcc6f9ba807b7061faa49fb6c60daf808dc79c9ee6ac43e</string>
 +</resources>
 diff --git a/LadrokUpdater/res/values/strings.xml b/LadrokUpdater/res/values/strings.xml
 new file mode 100644
 index 0000000..2d299d3
 --- /dev/null
 +++ b/LadrokUpdater/res/values/strings.xml
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,38 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
@@ -1502,7 +1493,6 @@ index 0000000..2d299d3
 +
 +    <string name="channel_name">Ladrok TV updates</string>
 +    <string name="current_version">This TV runs Ladrok TV %1$s (%2$s).</string>
-+    <string name="launcher_version">Home screen: Ladrok Launcher %1$s, updated automatically.</string>
 +
 +    <string name="state_idle">Not checked yet.</string>
 +    <string name="state_checking">Checking for updates…</string>
@@ -1633,220 +1623,12 @@ index 0000000..a3a9d65
 +        return false;
 +    }
 +}
-diff --git a/LadrokUpdater/src/tv/ladrok/updater/LauncherUpdate.java b/LadrokUpdater/src/tv/ladrok/updater/LauncherUpdate.java
-new file mode 100644
-index 0000000..8ab4d3a
---- /dev/null
-+++ b/LadrokUpdater/src/tv/ladrok/updater/LauncherUpdate.java
-@@ -0,0 +1,202 @@
-+/*
-+ * SPDX-License-Identifier: Apache-2.0
-+ */
-+
-+package tv.ladrok.updater;
-+
-+import android.app.PendingIntent;
-+import android.content.BroadcastReceiver;
-+import android.content.Context;
-+import android.content.Intent;
-+import android.content.IntentFilter;
-+import android.content.pm.PackageInfo;
-+import android.content.pm.PackageInstaller;
-+import android.content.pm.PackageManager;
-+import android.content.pm.Signature;
-+import android.text.TextUtils;
-+import android.util.Log;
-+
-+import org.json.JSONArray;
-+import org.json.JSONException;
-+import org.json.JSONObject;
-+
-+import java.io.File;
-+import java.io.FileInputStream;
-+import java.io.IOException;
-+import java.io.InputStream;
-+import java.io.OutputStream;
-+import java.security.MessageDigest;
-+import java.security.NoSuchAlgorithmException;
-+import java.util.concurrent.CountDownLatch;
-+import java.util.concurrent.TimeUnit;
-+
-+/**
-+ * Keeps Ladrok Launcher (the home screen, built into the image as a prebuilt) at its newest
-+ * release between system updates. The APK is installed over the built-in one only if it is the
-+ * launcher package, has a higher version code, and is signed with the pinned launcher
-+ * certificate (config.xml). The package manager also refuses a key change for system apps.
-+ * Runs on the update service's worker thread.
-+ */
-+final class LauncherUpdate {
-+    private static final String TAG = Updater.TAG;
-+    private static final String APK = "LadrokLauncher.apk";
-+    private static final String ACTION_RESULT = "tv.ladrok.updater.LAUNCHER_INSTALLED";
-+
-+    private final Context mContext;
-+    private final String mRepo;
-+    private final String mPackage;
-+    private final String mCert;
-+
-+    LauncherUpdate(Context context) {
-+        mContext = context;
-+        mRepo = context.getString(R.string.launcher_repo);
-+        mPackage = context.getString(R.string.launcher_package);
-+        mCert = context.getString(R.string.launcher_cert_sha256);
-+    }
-+
-+    /** Installed launcher version name, or null if it isn't installed. */
-+    static String installedVersion(Context context) {
-+        try {
-+            return context.getPackageManager().getPackageInfo(
-+                    context.getString(R.string.launcher_package), 0).versionName;
-+        } catch (PackageManager.NameNotFoundException e) {
-+            return null;
-+        }
-+    }
-+
-+    /** Checks the launcher repo's latest release and installs it if it is newer. */
-+    void run() throws IOException {
-+        if (TextUtils.isEmpty(mRepo)) return;
-+        PackageInfo installed;
-+        try {
-+            installed = mContext.getPackageManager().getPackageInfo(mPackage, 0);
-+        } catch (PackageManager.NameNotFoundException e) {
-+            return;  // only ever updated, never installed fresh
-+        }
-+        String tag, apkUrl = null, shaUrl = null;
-+        try {
-+            JSONObject release = new JSONObject(Updater.fetchString(String.format(Updater.API, mRepo)));
-+            tag = release.getString("tag_name");
-+            JSONArray assets = release.getJSONArray("assets");
-+            for (int i = 0; i < assets.length(); i++) {
-+                JSONObject a = assets.getJSONObject(i);
-+                if (APK.equals(a.getString("name"))) apkUrl = a.getString("browser_download_url");
-+                if ((APK + ".sha256").equals(a.getString("name"))) {
-+                    shaUrl = a.getString("browser_download_url");
-+                }
-+            }
-+        } catch (JSONException e) {
-+            throw new IOException("bad launcher release data: " + e.getMessage(), e);
-+        }
-+        // Release tags are the version names (v0.2.0); the same name means nothing to do
-+        if (tag.equals(installed.versionName)) return;
-+        if (apkUrl == null || shaUrl == null) throw new IOException("launcher " + tag + " has no " + APK);
-+
-+        File f = new File(mContext.getCacheDir(), APK);
-+        try {
-+            Updater.downloadTo(apkUrl, f);
-+            String want = Updater.fetchString(shaUrl).trim().split("\\s+")[0];
-+            if (!want.equalsIgnoreCase(sha256(f))) {
-+                throw new IOException("launcher " + tag + " download is corrupt (SHA-256 mismatch)");
-+            }
-+            PackageInfo apk = mContext.getPackageManager().getPackageArchiveInfo(f.getPath(),
-+                    PackageManager.GET_SIGNING_CERTIFICATES);
-+            if (apk == null || !mPackage.equals(apk.packageName)) {
-+                throw new IOException("launcher " + tag + " is not " + mPackage);
-+            }
-+            if (!signedWithPinnedKey(apk)) {
-+                throw new IOException("launcher " + tag + " is not signed with the launcher key");
-+            }
-+            if (apk.getLongVersionCode() <= installed.getLongVersionCode()) {
-+                Log.i(TAG, "launcher " + tag + " is not newer than " + installed.versionName);
-+                return;
-+            }
-+            install(f);
-+            Log.i(TAG, "launcher updated " + installed.versionName + " -> " + apk.versionName);
-+        } finally {
-+            f.delete();
-+        }
-+    }
-+
-+    private boolean signedWithPinnedKey(PackageInfo apk) throws IOException {
-+        if (apk.signingInfo == null || apk.signingInfo.hasMultipleSigners()) return false;
-+        Signature[] signers = apk.signingInfo.getApkContentsSigners();
-+        if (signers == null || signers.length != 1) return false;
-+        return mCert.equalsIgnoreCase(hex(digest(signers[0].toByteArray())));
-+    }
-+
-+    /** Installs without asking: this app runs as the system UID, which holds INSTALL_PACKAGES. */
-+    private void install(File apk) throws IOException {
-+        PackageInstaller pi = mContext.getPackageManager().getPackageInstaller();
-+        PackageInstaller.SessionParams params =
-+                new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-+        params.setAppPackageName(mPackage);
-+        params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
-+        int id = pi.createSession(params);
-+
-+        CountDownLatch done = new CountDownLatch(1);
-+        int[] status = {PackageInstaller.STATUS_FAILURE};
-+        String[] message = {null};
-+        BroadcastReceiver receiver = new BroadcastReceiver() {
-+            @Override
-+            public void onReceive(Context context, Intent intent) {
-+                status[0] = intent.getIntExtra(PackageInstaller.EXTRA_STATUS,
-+                        PackageInstaller.STATUS_FAILURE);
-+                message[0] = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-+                done.countDown();
-+            }
-+        };
-+        mContext.registerReceiver(receiver, new IntentFilter(ACTION_RESULT),
-+                Context.RECEIVER_NOT_EXPORTED);
-+        try (PackageInstaller.Session session = pi.openSession(id)) {
-+            try (InputStream in = new FileInputStream(apk);
-+                 OutputStream out = session.openWrite("base.apk", 0, apk.length())) {
-+                byte[] buf = new byte[1 << 16];
-+                int n;
-+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-+                session.fsync(out);
-+            }
-+            PendingIntent result = PendingIntent.getBroadcast(mContext, id,
-+                    new Intent(ACTION_RESULT).setPackage(mContext.getPackageName()),
-+                    PendingIntent.FLAG_MUTABLE);
-+            session.commit(result.getIntentSender());
-+            if (!done.await(5, TimeUnit.MINUTES)) throw new IOException("launcher install timed out");
-+        } catch (InterruptedException e) {
-+            Thread.currentThread().interrupt();
-+            throw new IOException("launcher install interrupted");
-+        } finally {
-+            mContext.unregisterReceiver(receiver);
-+        }
-+        if (status[0] != PackageInstaller.STATUS_SUCCESS) {
-+            throw new IOException("launcher install failed: " + message[0]);
-+        }
-+    }
-+
-+    private static String sha256(File f) throws IOException {
-+        try (InputStream in = new FileInputStream(f)) {
-+            MessageDigest md = sha256Digest();
-+            byte[] buf = new byte[1 << 16];
-+            int n;
-+            while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
-+            return hex(md.digest());
-+        }
-+    }
-+
-+    private static byte[] digest(byte[] data) throws IOException {
-+        return sha256Digest().digest(data);
-+    }
-+
-+    private static MessageDigest sha256Digest() throws IOException {
-+        try {
-+            return MessageDigest.getInstance("SHA-256");
-+        } catch (NoSuchAlgorithmException e) {
-+            throw new IOException(e);
-+        }
-+    }
-+
-+    private static String hex(byte[] bytes) {
-+        StringBuilder sb = new StringBuilder();
-+        for (byte b : bytes) sb.append(String.format("%02x", b));
-+        return sb.toString();
-+    }
-+}
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
 new file mode 100644
 index 0000000..2e7bf13
 --- /dev/null
 +++ b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,172 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -1984,8 +1766,6 @@ index 0000000..2e7bf13
 +            String v = c != null ? c.version : "";
 +            String current = getString(R.string.current_version, Build.VERSION.INCREMENTAL,
 +                    DateFormat.getMediumDateFormat(requireContext()).format(Build.TIME));
-+            String launcher = LauncherUpdate.installedVersion(requireContext());
-+            if (launcher != null) current += "\n" + getString(R.string.launcher_version, launcher);
 +            String state;
 +            switch (u.state()) {
 +                case CHECKING:
@@ -2085,7 +1865,7 @@ new file mode 100644
 index 0000000..882b743
 --- /dev/null
 +++ b/LadrokUpdater/src/tv/ladrok/updater/UpdateService.java
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,215 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -2188,12 +1968,6 @@ index 0000000..882b743
 +    private void check() {
 +        Updater.State s = mUpdater.state();
 +        if (s == Updater.State.INSTALLING || s == Updater.State.NEED_REBOOT) return;
-+        // The launcher has its own releases; a failure there doesn't touch the system update state
-+        try {
-+            new LauncherUpdate(this).run();
-+        } catch (IOException | RuntimeException e) {
-+            Log.w(Updater.TAG, "launcher update: " + e.getMessage());
-+        }
 +        mUpdater.setState(Updater.State.CHECKING);
 +        try {
 +            UpdateConfig c = mUpdater.fetchLatest();

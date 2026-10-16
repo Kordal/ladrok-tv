@@ -9,8 +9,8 @@ Android TV (AOSP 17) for the **Raspberry Pi 5**, based on [raspberry-vanilla](ht
 - **A quiet home screen**: [Ladrok Launcher](https://github.com/Kordal/ladrok-start).
   - On the left: Watch Next and the Channels you pick.
   - On the right: your apps as a phone-style keypad. The digits 1–9 open them.
-  - Every release ships the newest Launcher, and the TV keeps it up to date between system updates.
-- **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps (such as Nuvio, Stremio, Jellyfin and Tailscale) from their GitHub releases, F-Droid or the vendor's download page. It is built in as a privileged system app, so it installs and updates apps without prompts. Automatic updates can be switched off in the Store.
+  - Every release ships the newest Launcher, and Ladrok Store keeps it up to date between system updates.
+- **An app store**: [Ladrok Store](https://github.com/Kordal/ladrok-store). A short, curated list of TV apps (such as Nuvio, Stremio, Jellyfin and Tailscale) from their GitHub releases, F-Droid or the vendor's download page. It is built in as a privileged system app, so it installs and updates apps without prompts. It is the TV's only app updater: it also updates itself and the Launcher. Automatic updates can be switched off in the Store.
 - **/data fills the card**: on first boot, the user data partition grows to the end of the SD card.
 - **Hardened**: SELinux enforcing, and everything is signed with this project's own release keys rather than the public AOSP test keys.
 
@@ -64,7 +64,7 @@ A TV only installs updates of its own variant.
 - **Launcher and Store**:
   - Ladrok Launcher and Ladrok Store are built in their own repositories and included as prebuilt APKs. The Store is a privileged app (`priv-app`), so its installs need no confirmation.
   - `scripts/fetch-prebuilts.sh` downloads the newest release of each at build time. It only accepts APKs signed with their pinned certificate.
-  - Between system updates, `LadrokUpdater` installs newer Launcher releases that carry the same certificate. The Store itself is updated with the system; the apps it offers come from its catalog, which changes without a system update.
+  - Between system updates, Ladrok Store installs newer releases of the Launcher and of itself, from its catalog, only when they carry the same certificate. `LadrokUpdater` handles system updates only.
 
 ## Build from source
 
