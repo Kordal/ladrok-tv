@@ -29382,17 +29382,18 @@ index 80957cc..78e7428 100644
 +
 +# The power HAL's fast message queue (memfd, labelled tmpfs)
 +allow system_server tmpfs:file { read write map };
-diff --git a/sepolicy_system_ext/app.te b/sepolicy_system_ext/app.te
+diff --git a/sepolicy_system_ext/audioserver.te b/sepolicy_system_ext/audioserver.te
 new file mode 100644
-index 0000000..5a2c40e
 --- /dev/null
-+++ b/sepolicy_system_ext/app.te
-@@ -0,0 +1,5 @@
++++ b/sepolicy_system_ext/audioserver.te
+@@ -0,0 +1,7 @@
 +# audioserver hands each AudioTrack its control block as a memfd labelled audioserver_tmpfs.
-+# Without this, apps get "createTrack_l(0): Could not get control block" and play no sound
-+# (avc: denied { write } untrusted_app -> audioserver_tmpfs, path memfd:MemoryHeapBase).
++# Platform policy already allows appdomain to read/write it, but apps run with per-app MLS
++# categories (s0:c75,c256,...) while the memfd is s0, so the MLS file-write constraint denies it:
++# apps get "createTrack_l(0): Could not get control block" and play no sound. Exempt the memfd
++# from MLS, as platform policy does for system_server_tmpfs and app_zygote_tmpfs.
 +# Platform policy, not vendor sepolicy/: audioserver_tmpfs is a platform-private type.
-+allow { appdomain -isolated_app_all -sdk_sandbox_all } audioserver_tmpfs:file { getattr map read write };
++typeattribute audioserver_tmpfs mlstrustedobject;
 diff --git a/vendor.prop b/vendor.prop
 index 37c5a94..8a7ca55 100644
 --- a/vendor.prop
