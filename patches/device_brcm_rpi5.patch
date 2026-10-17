@@ -452,10 +452,10 @@ index 0000000..8d20a96
 +</manifest>
 diff --git a/LadrokSetup/res/values/strings.xml b/LadrokSetup/res/values/strings.xml
 new file mode 100644
-index 0000000..d93225b
+index 0000000..1b46344
 --- /dev/null
 +++ b/LadrokSetup/res/values/strings.xml
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,23 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
@@ -466,7 +466,7 @@ index 0000000..d93225b
 +    <string name="language_desc">Choose your language.</string>
 +
 +    <string name="region_title">Region</string>
-+    <string name="region_desc">Choose the regional variant of %1$s. It sets date, number and currency formats.</string>
++    <string name="region_desc">Choose the regional variant of %1$s. It sets date, number and currency formats, and the country of this TV (Wi-Fi channels and time zones).</string>
 +
 +    <string name="country_title">Country</string>
 +    <string name="country_desc">Where is this TV? This sets the allowed Wi-Fi channels and the list of time zones.</string>
@@ -477,6 +477,7 @@ index 0000000..d93225b
 +    <string name="confirm_title">All set</string>
 +    <string name="confirm_desc">Language: %1$s\nCountry: %2$s\nTime zone: %3$s\n\nYou can change these later in Settings.</string>
 +    <string name="confirm_finish">Finish</string>
++    <string name="confirm_change_country">Change country</string>
 +</resources>
 diff --git a/LadrokSetup/res/values/styles.xml b/LadrokSetup/res/values/styles.xml
 new file mode 100644
@@ -493,10 +494,10 @@ index 0000000..15ac7d1
 +</resources>
 diff --git a/LadrokSetup/src/tv/ladrok/setup/BaseStep.java b/LadrokSetup/src/tv/ladrok/setup/BaseStep.java
 new file mode 100644
-index 0000000..b1fa6f7
+index 0000000..8acf40f
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/BaseStep.java
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,82 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -510,7 +511,9 @@ index 0000000..b1fa6f7
 +import androidx.leanback.app.GuidedStepSupportFragment;
 +import androidx.leanback.widget.GuidedAction;
 +
++import java.util.Arrays;
 +import java.util.Locale;
++import java.util.Set;
 +
 +/** A setup step showing one list of choices; the action id is the index into that list. */
 +public abstract class BaseStep extends GuidedStepSupportFragment {
@@ -533,6 +536,34 @@ index 0000000..b1fa6f7
 +        add(getParentFragmentManager(), step);
 +    }
 +
++    /**
++     * The language and region are chosen. A locale with a country ("en-GB") gives the TV's
++     * country too, so the Country step is skipped; it stays reachable from the last step.
++     */
++    void localeChosen(Locale locale) {
++        setup().locale = locale;
++        String country = locale.getCountry();
++        // Regions such as "419" (Latin America) aren't countries.
++        if (Arrays.asList(Locale.getISOCountries()).contains(country)) {
++            countryChosen(country);
++        } else {
++            next(new CountryStep());
++        }
++    }
++
++    /** Asks for the time zone, unless the country has only one. */
++    void countryChosen(String country) {
++        SetupActivity setup = setup();
++        setup.country = country;
++        Set<String> zones = TimeZoneStep.zonesFor(country);
++        if (zones.size() == 1) {
++            setup.timeZone = zones.iterator().next();
++            next(new ConfirmStep());
++        } else {
++            next(new TimeZoneStep());
++        }
++    }
++
 +    @Override
 +    public void onViewCreated(View view, Bundle savedInstanceState) {
 +        super.onViewCreated(view, savedInstanceState);
@@ -551,10 +582,10 @@ index 0000000..b1fa6f7
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java b/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java
 new file mode 100644
-index 0000000..d67ffde
+index 0000000..0c3862e
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,50 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -590,19 +621,27 @@ index 0000000..d67ffde
 +                .id(0)
 +                .title(getString(R.string.confirm_finish))
 +                .build());
++        actions.add(new GuidedAction.Builder(requireContext())
++                .id(1)
++                .title(getString(R.string.confirm_change_country))
++                .build());
 +    }
 +
 +    @Override
 +    public void onGuidedActionClicked(GuidedAction action) {
++        if (action.getId() == 1) {
++            next(new CountryStep());
++            return;
++        }
 +        setup().finishSetup();
 +    }
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/CountryStep.java b/LadrokSetup/src/tv/ladrok/setup/CountryStep.java
 new file mode 100644
-index 0000000..8e62f1a
+index 0000000..05db6af
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/CountryStep.java
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,98 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -622,7 +661,6 @@ index 0000000..8e62f1a
 +import java.util.List;
 +import java.util.Locale;
 +import java.util.Map;
-+import java.util.Set;
 +import java.util.TreeMap;
 +
 +/**
@@ -687,15 +725,7 @@ index 0000000..8e62f1a
 +    }
 +
 +    private void choose(int index) {
-+        SetupActivity setup = setup();
-+        setup.country = mCodes.get(index);
-+        Set<String> zones = TimeZoneStep.zonesFor(setup.country);
-+        if (zones.size() == 1) {
-+            setup.timeZone = zones.iterator().next();
-+            next(new ConfirmStep());
-+        } else {
-+            next(new TimeZoneStep());
-+        }
++        countryChosen(mCodes.get(index));
 +    }
 +
 +    /** Index letter of a name without accents, e.g. "Åland Islands" -> "A". */
@@ -712,10 +742,10 @@ index 0000000..8e62f1a
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/LanguageStep.java b/LadrokSetup/src/tv/ladrok/setup/LanguageStep.java
 new file mode 100644
-index 0000000..5cefefa
+index 0000000..9363ca5
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/LanguageStep.java
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,84 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -796,17 +826,16 @@ index 0000000..5cefefa
 +            next(new RegionStep());
 +            return;
 +        }
-+        setup.locale = regions.isEmpty()
-+                ? language.getLocale() : regions.iterator().next().getLocale();
-+        next(new CountryStep());
++        localeChosen(regions.isEmpty()
++                ? language.getLocale() : regions.iterator().next().getLocale());
 +    }
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/RegionStep.java b/LadrokSetup/src/tv/ladrok/setup/RegionStep.java
 new file mode 100644
-index 0000000..6067400
+index 0000000..908a792
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/RegionStep.java
-@@ -0,0 +1,56 @@
+@@ -0,0 +1,55 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -859,16 +888,15 @@ index 0000000..6067400
 +
 +    @Override
 +    public void onGuidedActionClicked(GuidedAction action) {
-+        setup().locale = mItems.get((int) action.getId()).getLocale();
-+        next(new CountryStep());
++        localeChosen(mItems.get((int) action.getId()).getLocale());
 +    }
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java b/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java
 new file mode 100644
-index 0000000..10da666
+index 0000000..c45c009
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,114 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -895,7 +923,8 @@ index 0000000..10da666
 +import java.util.Locale;
 +
 +/**
-+ * First-boot setup: language -> region -> country -> time zone -> finish.
++ * First-boot setup: language -> region -> time zone -> finish. The country comes from the
++ * region; the Country step only shows when it can't, or when asked for on the last step.
 + * Nothing is applied until Finish, so backing out of any step is free.
 + */
 +public class SetupActivity extends FragmentActivity {
@@ -929,6 +958,13 @@ index 0000000..10da666
 +
 +    @Override
 +    public void onBackPressed() {
++        // Back in an open list (a country letter group) closes that list, not the whole step.
++        GuidedStepSupportFragment step = GuidedStepSupportFragment
++                .getCurrentGuidedStepSupportFragment(getSupportFragmentManager());
++        if (step != null && step.isSubActionsExpanded()) {
++            step.collapseSubActions();
++            return;
++        }
 +        // Back on the first step would leave setup unfinished; ignore it.
 +        if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
 +            return;
