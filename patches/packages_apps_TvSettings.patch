@@ -1,0 +1,243 @@
+diff --git a/Settings/res/layout/wifi_container.xml b/Settings/res/layout/wifi_container.xml
+index ea9e593..bf7f912 100644
+--- a/Settings/res/layout/wifi_container.xml
++++ b/Settings/res/layout/wifi_container.xml
+@@ -17,4 +17,4 @@
+     android:id="@+id/wifi_container"
+     android:layout_width="match_parent"
+     android:layout_height="match_parent"
+-    android:background="#1e232e" />
+\ No newline at end of file
++    android:background="@android:color/black" />
+\ No newline at end of file
+diff --git a/Settings/res/xml/main_prefs.xml b/Settings/res/xml/main_prefs.xml
+index a445840..791b5fd 100644
+--- a/Settings/res/xml/main_prefs.xml
++++ b/Settings/res/xml/main_prefs.xml
+@@ -18,6 +18,8 @@
+ <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+                   xmlns:custom="http://schemas.android.com/apk/res-auto"
+                   android:title="@string/settings_app_name">
++    <!-- Ladrok: one flat list. Device Preferences' useful entries are promoted to the top
++         level; Accounts & Sign In and Help & Feedback are left out. -->
+     <PreferenceCategory
+         android:key="general_settings"
+         android:title="@string/header_category_general_settings"
+@@ -27,53 +29,6 @@
+             android:key="network"
+             android:title="@string/connectivity_network_category_title"
+             android:fragment="com.android.tv.settings.connectivity.NetworkFragment" />
+-        <Preference
+-            android:icon="@drawable/ic_add_an_account"
+-            android:key="accounts_and_sign_in"
+-            android:title="@string/accounts_category_title"
+-            android:fragment="com.android.tv.settings.accounts.AccountsFragment" />
+-        <com.android.tv.twopanelsettings.slices.SlicePreference
+-            android:icon="@drawable/ic_add_an_account"
+-            android:key="accounts_and_sign_in_slice"
+-            android:title="@string/accounts_category_title"
+-            android:summary="@string/accounts_slice_summary"
+-            android:fragment="com.android.tv.settings.accounts.AccountsSliceFragment"
+-            custom:uri="@string/account_slice_uri"/>
+-        <Preference
+-            android:icon="@drawable/ic_volume_up"
+-            android:key="sound"
+-            android:title="@string/sound_category_title"
+-            android:visible="false">
+-            <intent android:action="com.android.tv.settings.SOUND" />
+-        </Preference>
+-        <Preference
+-            android:icon="@drawable/ic_policy"
+-            android:key="privacy"
+-            android:title="@string/privacy_category_title"
+-            android:summary="@string/privacy_category_summary"
+-            android:fragment="com.android.tv.settings.privacy.PrivacyFragment"
+-            custom:isPreferenceVisible="false" />
+-        <Preference
+-            android:icon="@drawable/ic_photo_size_select_actual"
+-            android:key="display_and_sound"
+-            android:title="@string/device_display_sound"
+-            android:fragment="com.android.tv.settings.device.displaysound.DisplaySoundFragment"
+-            custom:isPreferenceVisible="false" />
+-        <Preference
+-            android:icon="@drawable/ic_applications"
+-            android:key="applications"
+-            android:title="@string/applications_category_title"
+-            android:fragment="com.android.tv.settings.device.apps.AppsFragment" />
+-        <Preference
+-            android:icon="@drawable/ic_device_prefs"
+-            android:key="device_pref"
+-            android:title="@string/device_pref_category_title"
+-            android:fragment="com.android.tv.settings.device.DevicePrefFragment" />
+-        <Preference
+-            android:icon="@drawable/ic_accessibility_new"
+-            android:key="accessibility"
+-            android:title="@string/accessibility_category_title"
+-            android:fragment="com.android.tv.settings.accessibility.AccessibilityFragment" />
+         <Preference
+             android:icon="@drawable/ic_remotes_and_accessories"
+             android:key="remotes_and_accessories"
+@@ -99,17 +54,70 @@
+             custom:isPreferenceVisible="false"
+             custom:uri="@string/connected_devices_slice_uri"/>
+         <Preference
+-            android:icon="@drawable/ic_help_outline"
+-            android:key="help_and_feedback"
+-            android:title="@string/help_and_feedback_category_title"
+-            android:fragment="com.android.tv.settings.help.HelpFragment"
+-            custom:isPreferenceVisible="false">
++            android:icon="@drawable/ic_photo_size_select_actual"
++            android:key="display_and_sound"
++            android:title="@string/device_display_sound"
++            android:fragment="com.android.tv.settings.device.displaysound.DisplaySoundFragment"
++            custom:isPreferenceVisible="false" />
++        <Preference
++            android:icon="@drawable/ic_volume_up"
++            android:key="sound"
++            android:title="@string/sound_category_title"
++            android:visible="false">
++            <intent android:action="com.android.tv.settings.SOUND" />
+         </Preference>
+-        <com.android.tv.twopanelsettings.slices.SlicePreference
+-            android:icon="@drawable/ic_help_outline"
+-            android:key="help_and_feedback_slice"
+-            android:title="@string/help_and_feedback_category_title"
+-            android:fragment="com.android.tv.twopanelsettings.slices.SliceFragment"
+-            custom:uri="@string/help_and_feedback_slice_uri"/>
++        <Preference
++            android:icon="@drawable/ic_applications"
++            android:key="applications"
++            android:title="@string/applications_category_title"
++            android:fragment="com.android.tv.settings.device.apps.AppsFragment" />
++        <Preference
++            android:fragment="com.android.tv.settings.device.display.daydream.DaydreamFragment"
++            android:icon="@drawable/ic_settings_system_daydream"
++            android:key="daydream"
++            android:title="@string/device_daydream"/>
++        <Preference
++            android:fragment="com.android.tv.settings.system.locale.LanguagePickerFragment"
++            android:icon="@drawable/ic_language"
++            android:key="language"
++            android:title="@string/system_language"/>
++        <Preference
++            android:fragment="com.android.tv.settings.system.DateTimeFragment"
++            android:icon="@drawable/ic_access_time"
++            android:key="date_time"
++            android:title="@string/system_date_time"/>
++        <Preference
++            android:fragment="com.android.tv.settings.device.StorageSummaryFragment"
++            android:icon="@drawable/ic_storage"
++            android:key="storage"
++            android:title="@string/device_storage"/>
++        <Preference
++            android:icon="@drawable/ic_policy"
++            android:key="privacy"
++            android:title="@string/privacy_category_title"
++            android:summary="@string/privacy_category_summary"
++            android:fragment="com.android.tv.settings.privacy.PrivacyFragment"
++            custom:isPreferenceVisible="false" />
++        <Preference
++            android:icon="@drawable/ic_accessibility_new"
++            android:key="accessibility"
++            android:title="@string/accessibility_category_title"
++            android:fragment="com.android.tv.settings.accessibility.AccessibilityFragment" />
++        <Preference
++            android:fragment="com.android.tv.settings.about.AboutFragment"
++            android:icon="@drawable/ic_info_outline"
++            android:key="about_device"
++            android:title="@string/about_preference"/>
++        <com.android.tv.settings.LongClickPreference
++            android:icon="@drawable/ic_restart_alt"
++            android:key="reboot"
++            android:title="@string/restart_button_label"
++            android:fragment="com.android.tv.settings.about.RebootConfirmFragment" />
++        <Preference
++            android:fragment="com.android.tv.settings.system.development.DevelopmentFragment"
++            android:icon="@drawable/ic_developer_mode"
++            android:key="developer"
++            android:title="@string/system_developer_options"
++            android:visible="false"/>
+     </PreferenceCategory>
+ </PreferenceScreen>
+diff --git a/Settings/src/com/android/tv/settings/MainFragment.kt b/Settings/src/com/android/tv/settings/MainFragment.kt
+index 77288fc..c82a436 100644
+--- a/Settings/src/com/android/tv/settings/MainFragment.kt
++++ b/Settings/src/com/android/tv/settings/MainFragment.kt
+@@ -44,7 +44,9 @@ import androidx.preference.Preference
+ import androidx.preference.PreferenceCategory
+ import com.android.settingslib.core.AbstractPreferenceController
+ import com.android.settingslib.core.lifecycle.Lifecycle
++import com.android.settingslib.development.DevelopmentSettingsEnabler
+ import com.android.tv.settings.HotwordSwitchController.HotwordStateListener
++import com.android.tv.settings.about.RebootConfirmActivity
+ import com.android.tv.settings.accessories.AccessoryUtils
+ import com.android.tv.settings.accounts.AccountsFragment
+ import com.android.tv.settings.accounts.AccountsUtil
+@@ -74,7 +76,8 @@ open class MainFragment : PreferenceControllerFragment(),
+     TvSuggestionControllerMixinCompat.SuggestionControllerHost,
+     SuggestionPreference.Callback,
+     HotwordStateListener,
+-    SliceShard.Callbacks {
++    SliceShard.Callbacks,
++    LongClickPreference.OnLongClickListener {
+     @VisibleForTesting
+     var mConnectivityListenerOptional: Optional<ConnectivityListener>? = null
+ 
+@@ -253,6 +256,8 @@ open class MainFragment : PreferenceControllerFragment(),
+                 privacyPref.isVisible = true
+             }
+         }
++        findPreference<LongClickPreference>(KEY_REBOOT)?.setLongClickListener(this)
++        updateDeveloperPref()
+         mSuggestionQuickSettingPrefsContainer!!.onCreatePreferences()
+         updateSoundSettings()
+         SliceUtils.maybeUseSlice(
+@@ -679,6 +684,7 @@ open class MainFragment : PreferenceControllerFragment(),
+ 
+     override fun onResume() {
+         super.onResume()
++        updateDeveloperPref()
+         if (isWifiScanOptimisationEnabled) {
+             mConnectivityListenerLite!!.handleConnectivityChange()
+         } else {
+@@ -710,6 +716,11 @@ open class MainFragment : PreferenceControllerFragment(),
+         ) {
+             context!!.startActivity(preference.intent)
+             return true
++        } else if (preference.key == KEY_REBOOT) {
++            // As in DevicePrefFragment, which this entry was promoted from
++            InstrumentationUtils.logEntrySelected(TvSettingsEnums.SYSTEM_REBOOT)
++            startActivity(RebootConfirmActivity.getIntent(context, false))
++            return super.onPreferenceTreeClick(preference)
+         } else if (preference.key == KEY_BASIC_MODE_EXIT
+             && FlavorUtils.getFeatureFactory(context)
+                 .basicModeFeatureProvider.isBasicMode(context!!)
+@@ -724,6 +735,19 @@ open class MainFragment : PreferenceControllerFragment(),
+         }
+     }
+ 
++    override fun onPreferenceLongClick(preference: Preference): Boolean {
++        if (preference.key == KEY_REBOOT) {
++            InstrumentationUtils.logEntrySelected(TvSettingsEnums.SYSTEM_REBOOT)
++            startActivity(RebootConfirmActivity.getIntent(context, true))
++        }
++        return false
++    }
++
++    private fun updateDeveloperPref() {
++        findPreference<Preference>(KEY_DEVELOPER)?.isVisible =
++            DevelopmentSettingsEnabler.isDevelopmentSettingsEnabled(context)
++    }
++
+     override fun onDestroy() {
+         mSuggestionQuickSettingPrefsContainer!!.onDestroy()
+         super.onDestroy()
+@@ -832,6 +856,8 @@ open class MainFragment : PreferenceControllerFragment(),
+         private const val KEY_CHANNELS_AND_INPUTS = "channels_and_inputs"
+         private const val KEY_CHANNELS_AND_INPUTS_SLICE = "channels_and_inputs_slice"
+ 
++        private const val KEY_REBOOT = "reboot"
++        private const val KEY_DEVELOPER = "developer"
+         private const val KEY_HELP_AND_FEEDBACK = "help_and_feedback"
+         private const val KEY_HELP_AND_FEEDBACK_SLICE = "help_and_feedback_slice"
+ 

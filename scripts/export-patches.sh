@@ -11,6 +11,7 @@ declare -A PROJECTS=(
   [device/google/atv]=device_google_atv.patch
   [build/make]=build_make.patch
   [system/sepolicy]=system_sepolicy.patch
+  [packages/apps/TvSettings]=packages_apps_TvSettings.patch
 )
 for p in "${!PROJECTS[@]}"; do
   # intent-to-add so new (untracked) files show up in the diff too
