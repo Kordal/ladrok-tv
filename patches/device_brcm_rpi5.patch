@@ -582,10 +582,10 @@ index 0000000..8acf40f
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java b/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java
 new file mode 100644
-index 0000000..0c3862e
+index 0000000..01c2a08
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,64 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -602,10 +602,16 @@ index 0000000..0c3862e
 +import java.util.Locale;
 +
 +public class ConfirmStep extends BaseStep {
++    /** The choices this step shows; Finish applies exactly these. */
++    private String mCountry;
++    private String mTimeZone;
++
 +    @Override
 +    @NonNull
 +    public Guidance onCreateGuidance(Bundle savedInstanceState) {
 +        SetupActivity setup = setup();
++        mCountry = setup.country;
++        mTimeZone = setup.timeZone;
 +        Locale ui = setup.locale;
 +        return new Guidance(getString(R.string.confirm_title),
 +                getString(R.string.confirm_desc,
@@ -625,6 +631,14 @@ index 0000000..0c3862e
 +                .id(1)
 +                .title(getString(R.string.confirm_change_country))
 +                .build());
++    }
++
++    @Override
++    public void onResume() {
++        super.onResume();
++        // Back from an abandoned "Change country" lands here again: undo what it chose.
++        setup().country = mCountry;
++        setup().timeZone = mTimeZone;
 +    }
 +
 +    @Override
