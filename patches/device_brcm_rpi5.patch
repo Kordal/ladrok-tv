@@ -908,10 +908,10 @@ index 0000000..908a792
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java b/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java
 new file mode 100644
-index 0000000..c45c009
+index 0000000..bcfdbd3
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,129 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -928,6 +928,7 @@ index 0000000..c45c009
 +import android.os.UserManager;
 +import android.provider.Settings;
 +import android.util.Log;
++import android.view.KeyEvent;
 +
 +import androidx.fragment.app.FragmentActivity;
 +import androidx.leanback.app.GuidedStepSupportFragment;
@@ -971,20 +972,34 @@ index 0000000..c45c009
 +                PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
 +    }
 +
++    /** Set when a Back key-down was handled here, so its key-up doesn't reach the system. */
++    private boolean mSwallowBackUp;
++
++    // Back is handled on the key itself: on Android 13+ the system's back callback goes to the
++    // fragment back stack and never calls onBackPressed(), so an override there doesn't run.
 +    @Override
-+    public void onBackPressed() {
-+        // Back in an open list (a country letter group) closes that list, not the whole step.
-+        GuidedStepSupportFragment step = GuidedStepSupportFragment
-+                .getCurrentGuidedStepSupportFragment(getSupportFragmentManager());
-+        if (step != null && step.isSubActionsExpanded()) {
-+            step.collapseSubActions();
-+            return;
++    public boolean dispatchKeyEvent(KeyEvent event) {
++        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
++            if (event.getAction() == KeyEvent.ACTION_DOWN) {
++                GuidedStepSupportFragment step = GuidedStepSupportFragment
++                        .getCurrentGuidedStepSupportFragment(getSupportFragmentManager());
++                if (step != null && step.isSubActionsExpanded()) {
++                    // Back in an open list (a country letter group) closes that list only.
++                    step.collapseSubActions();
++                    mSwallowBackUp = true;
++                    return true;
++                }
++                if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
++                    // Back on the first step would leave setup unfinished; ignore it.
++                    mSwallowBackUp = true;
++                    return true;
++                }
++            } else if (event.getAction() == KeyEvent.ACTION_UP && mSwallowBackUp) {
++                mSwallowBackUp = false;
++                return true;
++            }
 +        }
-+        // Back on the first step would leave setup unfinished; ignore it.
-+        if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
-+            return;
-+        }
-+        super.onBackPressed();
++        return super.dispatchKeyEvent(event);
 +    }
 +
 +    void finishSetup() {
