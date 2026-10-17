@@ -1971,10 +1971,10 @@ index 0000000..d0e59b8
 +}
 diff --git a/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java b/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java
 new file mode 100644
-index 0000000..36864ae
+index 0000000..9898673
 --- /dev/null
 +++ b/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java
-@@ -0,0 +1,212 @@
+@@ -0,0 +1,224 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -1991,6 +1991,8 @@ index 0000000..36864ae
 +import android.widget.Button;
 +import android.widget.LinearLayout;
 +import android.widget.TextView;
++import android.window.OnBackInvokedCallback;
++import android.window.OnBackInvokedDispatcher;
 +
 +/**
 + * Settings > Sleep timer: the time left, Off / 30 / 60 / 90 / 120 min, and the sleep key: OK on
@@ -2016,6 +2018,12 @@ index 0000000..36864ae
 +    };
 +    private final Runnable mLearnTimeout = () -> stopLearning(null);
 +    private final Runnable mShowHint = this::showHint;
++    /**
++     * Back while waiting: cancels. With the new back dispatch, ViewRootImpl hands BACK to the top
++     * OnBackInvokedCallback before dispatchKeyEvent sees it (without this, it closes the screen).
++     */
++    private final OnBackInvokedCallback mCancelLearning =
++            () -> stopLearning(getString(R.string.key_unchanged));
 +
 +    private TextView mHeadline;
 +    private final Button[] mOptions = new Button[SleepTimer.STEPS.length];
@@ -2117,6 +2125,8 @@ index 0000000..36864ae
 +        mHandler.removeCallbacks(mShowHint);
 +        mKeyHint.setText(R.string.key_press_hint);
 +        mHandler.postDelayed(mLearnTimeout, LEARN_MS);
++        getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
++                OnBackInvokedDispatcher.PRIORITY_OVERLAY, mCancelLearning);
 +    }
 +
 +    /** Back to the sleep key row as it is now, with a message (or the hint, for null). */
@@ -2124,6 +2134,7 @@ index 0000000..36864ae
 +        mLearning = false;
 +        if (sLearning == this) sLearning = null;
 +        mHandler.removeCallbacks(mLearnTimeout);
++        getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(mCancelLearning);
 +        showKey();
 +        mKey.requestFocus();
 +        if (message == null) {
@@ -2135,6 +2146,7 @@ index 0000000..36864ae
 +
 +    private void learn(int keyCode) {
 +        if (keyCode == KeyEvent.KEYCODE_BACK) {
++            // Only with the old back dispatch; otherwise mCancelLearning gets it
 +            mSwallowUp = keyCode;
 +            stopLearning(getString(R.string.key_unchanged));
 +        } else if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
