@@ -1,3 +1,21 @@
+diff --git a/Settings/res/drawable/ic_bedtime.xml b/Settings/res/drawable/ic_bedtime.xml
+new file mode 100644
+index 0000000..8d7839e
+--- /dev/null
++++ b/Settings/res/drawable/ic_bedtime.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Material "bedtime" icon (Apache 2.0), for Ladrok Sleep timer -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++        android:width="32dp"
++        android:height="32dp"
++        android:viewportWidth="24.0"
++        android:viewportHeight="24.0">
++    <path
++        android:fillColor="#FFFFFFFF"
++        android:pathData="M12.34,2.02C6.59,1.82 2,6.42 2,12c0,5.52 4.48,10 10,10 3.71,0 6.93,-2.02 8.66,-5.02 -7.51,-0.25 -12.09,-8.43 -8.32,-14.96z"/>
++</vector>
 diff --git a/Settings/res/layout/wifi_container.xml b/Settings/res/layout/wifi_container.xml
 index ea9e593..bf7f912 100644
 --- a/Settings/res/layout/wifi_container.xml
@@ -10,8 +28,21 @@ index ea9e593..bf7f912 100644
 \ No newline at end of file
 +    android:background="@android:color/black" />
 \ No newline at end of file
+diff --git a/Settings/res/values/ladrok_strings.xml b/Settings/res/values/ladrok_strings.xml
+new file mode 100644
+index 0000000..73e7743
+--- /dev/null
++++ b/Settings/res/values/ladrok_strings.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Ladrok entries in the main menu -->
++<resources>
++    <!-- Main menu entry: opens the Ladrok sleep timer -->
++    <string name="ladrok_sleep_timer">Sleep timer</string>
++</resources>
 diff --git a/Settings/res/xml/main_prefs.xml b/Settings/res/xml/main_prefs.xml
-index a445840..791b5fd 100644
+index a445840..65b050d 100644
 --- a/Settings/res/xml/main_prefs.xml
 +++ b/Settings/res/xml/main_prefs.xml
 @@ -18,6 +18,8 @@
@@ -77,7 +108,7 @@ index a445840..791b5fd 100644
          <Preference
              android:icon="@drawable/ic_remotes_and_accessories"
              android:key="remotes_and_accessories"
-@@ -99,17 +54,70 @@
+@@ -99,17 +54,79 @@
              custom:isPreferenceVisible="false"
              custom:uri="@string/connected_devices_slice_uri"/>
          <Preference
@@ -114,6 +145,15 @@ index a445840..791b5fd 100644
 +            android:icon="@drawable/ic_settings_system_daydream"
 +            android:key="daydream"
 +            android:title="@string/device_daydream"/>
++        <!-- Ladrok sleep timer (device/brcm/rpi5/LadrokSleep) -->
++        <Preference
++            android:icon="@drawable/ic_bedtime"
++            android:key="sleep_timer"
++            android:title="@string/ladrok_sleep_timer">
++            <intent
++                android:targetPackage="tv.ladrok.sleep"
++                android:targetClass="tv.ladrok.sleep.SleepActivity" />
++        </Preference>
 +        <Preference
 +            android:fragment="com.android.tv.settings.system.locale.LanguagePickerFragment"
 +            android:icon="@drawable/ic_language"
@@ -160,7 +200,7 @@ index a445840..791b5fd 100644
      </PreferenceCategory>
  </PreferenceScreen>
 diff --git a/Settings/src/com/android/tv/settings/MainFragment.kt b/Settings/src/com/android/tv/settings/MainFragment.kt
-index 77288fc..c82a436 100644
+index 77288fc..e303ffa 100644
 --- a/Settings/src/com/android/tv/settings/MainFragment.kt
 +++ b/Settings/src/com/android/tv/settings/MainFragment.kt
 @@ -44,7 +44,9 @@ import androidx.preference.Preference
@@ -200,7 +240,11 @@ index 77288fc..c82a436 100644
          if (isWifiScanOptimisationEnabled) {
              mConnectivityListenerLite!!.handleConnectivityChange()
          } else {
-@@ -710,6 +716,11 @@ open class MainFragment : PreferenceControllerFragment(),
+@@ -707,9 +713,15 @@ open class MainFragment : PreferenceControllerFragment(),
+                     && preference.intent != null)
+             || (preference.key == KEY_CHANNELS_AND_INPUTS
+                     && preference.intent != null)
++            || preference.key == KEY_SLEEP_TIMER
          ) {
              context!!.startActivity(preference.intent)
              return true
@@ -212,7 +256,7 @@ index 77288fc..c82a436 100644
          } else if (preference.key == KEY_BASIC_MODE_EXIT
              && FlavorUtils.getFeatureFactory(context)
                  .basicModeFeatureProvider.isBasicMode(context!!)
-@@ -724,6 +735,19 @@ open class MainFragment : PreferenceControllerFragment(),
+@@ -724,6 +736,19 @@ open class MainFragment : PreferenceControllerFragment(),
          }
      }
  
@@ -232,11 +276,12 @@ index 77288fc..c82a436 100644
      override fun onDestroy() {
          mSuggestionQuickSettingPrefsContainer!!.onDestroy()
          super.onDestroy()
-@@ -832,6 +856,8 @@ open class MainFragment : PreferenceControllerFragment(),
+@@ -832,6 +857,9 @@ open class MainFragment : PreferenceControllerFragment(),
          private const val KEY_CHANNELS_AND_INPUTS = "channels_and_inputs"
          private const val KEY_CHANNELS_AND_INPUTS_SLICE = "channels_and_inputs_slice"
  
 +        private const val KEY_REBOOT = "reboot"
++        private const val KEY_SLEEP_TIMER = "sleep_timer"
 +        private const val KEY_DEVELOPER = "developer"
          private const val KEY_HELP_AND_FEEDBACK = "help_and_feedback"
          private const val KEY_HELP_AND_FEEDBACK_SLICE = "help_and_feedback_slice"

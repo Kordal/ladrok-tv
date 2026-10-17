@@ -1331,6 +1331,938 @@ index 0000000..d38fcb0
 +        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
 +    </privapp-permissions>
 +</permissions>
+diff --git a/LadrokSleep/Android.bp b/LadrokSleep/Android.bp
+new file mode 100644
+index 0000000..f4dc6c2
+--- /dev/null
++++ b/LadrokSleep/Android.bp
+@@ -0,0 +1,28 @@
++//
++// SPDX-License-Identifier: Apache-2.0
++//
++// Sleep timer: the sleep key (KEYCODE_BUTTON_1, claimed in LadrokFrameworkOverlay's
++// global_keys.xml) and Settings > Sleep timer set it; 60 s before the end a warning shows over
++// any app, and at the end playback pauses, the TV gets CEC <Standby> and the box goes to sleep.
++
++prebuilt_etc {
++    name: "privapp_whitelist_tv.ladrok.sleep",
++    system_ext_specific: true,
++    sub_dir: "permissions",
++    src: "tv.ladrok.sleep.xml",
++    filename_from_src: true,
++}
++
++android_app {
++    name: "LadrokSleep",
++    srcs: ["src/**/*.java"],
++    resource_dirs: ["res"],
++    platform_apis: true,
++    system_ext_specific: true,
++    certificate: "platform",
++    privileged: true,
++    required: ["privapp_whitelist_tv.ladrok.sleep"],
++    optimize: {
++        enabled: false,
++    },
++}
+diff --git a/LadrokSleep/AndroidManifest.xml b/LadrokSleep/AndroidManifest.xml
+new file mode 100644
+index 0000000..35252fb
+--- /dev/null
++++ b/LadrokSleep/AndroidManifest.xml
+@@ -0,0 +1,48 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Persistent: the warning is a window owned by this process, and the process must be
++     allowed to show it and to act on the alarms at any time. -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++        package="tv.ladrok.sleep">
++
++    <uses-permission android:name="android.permission.DEVICE_POWER" />
++    <uses-permission android:name="android.permission.HDMI_CEC" />
++    <uses-permission android:name="android.permission.SYSTEM_APPLICATION_OVERLAY" />
++    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
++
++    <uses-feature android:name="android.software.leanback" android:required="false" />
++    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
++
++    <application
++            android:label="@string/app_name"
++            android:persistent="true"
++            android:allowBackup="false"
++            android:theme="@style/Theme.LadrokSleep">
++
++        <!-- Settings > Sleep timer -->
++        <activity android:name=".SleepActivity"
++                android:exported="true"
++                android:launchMode="singleTask"
++                android:excludeFromRecents="true" />
++
++        <!-- The sleep key, sent by GlobalKeyManager (see global_keys.xml) -->
++        <receiver android:name=".KeyReceiver"
++                android:exported="true">
++            <intent-filter>
++                <action android:name="android.intent.action.GLOBAL_BUTTON" />
++            </intent-filter>
++        </receiver>
++
++        <receiver android:name=".AlarmReceiver"
++                android:exported="false" />
++
++        <!-- Debug builds only: sets a short timer from adb (see DebugReceiver) -->
++        <receiver android:name=".DebugReceiver"
++                android:exported="true"
++                android:permission="android.permission.DUMP">
++            <intent-filter>
++                <action android:name="tv.ladrok.sleep.SET" />
++            </intent-filter>
++        </receiver>
++    </application>
++</manifest>
+diff --git a/LadrokSleep/res/color/pill_text.xml b/LadrokSleep/res/color/pill_text.xml
+new file mode 100644
+index 0000000..4639d58
+--- /dev/null
++++ b/LadrokSleep/res/color/pill_text.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true" android:color="@color/ladrok_black" />
++    <item android:color="@color/ladrok_ink" />
++</selector>
+diff --git a/LadrokSleep/res/drawable/pill.xml b/LadrokSleep/res/drawable/pill.xml
+new file mode 100644
+index 0000000..8af2504
+--- /dev/null
++++ b/LadrokSleep/res/drawable/pill.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Ladrok pill: outlined at rest, inverted (Ink fill) when focused; the current choice has a
++     Silver outline. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true">
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <solid android:color="@color/ladrok_ink" />
++        </shape>
++    </item>
++    <item android:state_activated="true">
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <stroke android:width="2dp" android:color="@color/ladrok_silver" />
++        </shape>
++    </item>
++    <item>
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <stroke android:width="1dp" android:color="@color/ladrok_line" />
++        </shape>
++    </item>
++</selector>
+diff --git a/LadrokSleep/res/drawable/warning_background.xml b/LadrokSleep/res/drawable/warning_background.xml
+new file mode 100644
+index 0000000..e9e848b
+--- /dev/null
++++ b/LadrokSleep/res/drawable/warning_background.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++        android:shape="rectangle">
++    <corners android:radius="24dp" />
++    <solid android:color="@color/ladrok_raised" />
++    <stroke android:width="1dp" android:color="@color/ladrok_line" />
++</shape>
+diff --git a/LadrokSleep/res/layout/notice.xml b/LadrokSleep/res/layout/notice.xml
+new file mode 100644
+index 0000000..f21fce7
+--- /dev/null
++++ b/LadrokSleep/res/layout/notice.xml
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- "Sleep in 60 min" after a sleep key press, where a toast would be -->
++<TextView xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:background="@drawable/warning_background"
++        android:paddingStart="32dp"
++        android:paddingEnd="32dp"
++        android:paddingTop="14dp"
++        android:paddingBottom="14dp"
++        android:textColor="@color/ladrok_ink"
++        android:textSize="22sp"
++        android:fontFamily="sans-serif-light" />
+diff --git a/LadrokSleep/res/layout/option.xml b/LadrokSleep/res/layout/option.xml
+new file mode 100644
+index 0000000..515ac0d
+--- /dev/null
++++ b/LadrokSleep/res/layout/option.xml
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<Button xmlns:android="http://schemas.android.com/apk/res/android"
++        style="@style/Ladrok.Pill" />
+diff --git a/LadrokSleep/res/layout/sleep_activity.xml b/LadrokSleep/res/layout/sleep_activity.xml
+new file mode 100644
+index 0000000..3fe06e0
+--- /dev/null
++++ b/LadrokSleep/res/layout/sleep_activity.xml
+@@ -0,0 +1,66 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Settings > Sleep timer, in the System update layout: title top left, clock top right, the
++     remaining time as the headline, one line of explanation and the durations as pills. -->
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:background="@color/ladrok_black"
++        android:clipChildren="false"
++        android:clipToPadding="false"
++        android:paddingStart="48dp"
++        android:paddingEnd="48dp"
++        android:paddingTop="26dp"
++        android:paddingBottom="32dp">
++
++    <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="@string/app_name"
++            android:textColor="@color/ladrok_muted"
++            android:textSize="22sp"
++            android:fontFamily="sans-serif-light" />
++
++    <TextClock
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="end"
++            android:format12Hour="h:mm"
++            android:format24Hour="HH:mm"
++            android:textColor="@color/ladrok_silver"
++            android:textSize="22sp"
++            android:fontFamily="sans-serif-light" />
++
++    <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="100dp"
++            android:clipChildren="false"
++            android:orientation="vertical">
++
++        <TextView
++                android:id="@+id/headline"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:textColor="@color/ladrok_ink"
++                android:textSize="44sp"
++                android:fontFamily="sans-serif-light" />
++
++        <TextView
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="6dp"
++                android:maxWidth="640dp"
++                android:text="@string/description"
++                android:textColor="@color/ladrok_muted"
++                android:textSize="18sp" />
++
++        <LinearLayout
++                android:id="@+id/options"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="40dp"
++                android:clipChildren="false"
++                android:orientation="horizontal" />
++    </LinearLayout>
++</FrameLayout>
+diff --git a/LadrokSleep/res/layout/warning.xml b/LadrokSleep/res/layout/warning.xml
+new file mode 100644
+index 0000000..0ff5788
+--- /dev/null
++++ b/LadrokSleep/res/layout/warning.xml
+@@ -0,0 +1,30 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- The 60 s warning, at the top of the screen (clear of subtitles) over whatever is playing. -->
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:background="@drawable/warning_background"
++        android:gravity="center_horizontal"
++        android:orientation="vertical"
++        android:paddingStart="40dp"
++        android:paddingEnd="40dp"
++        android:paddingTop="20dp"
++        android:paddingBottom="22dp">
++
++    <TextView
++            android:id="@+id/countdown"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:textColor="@color/ladrok_ink"
++            android:textSize="28sp"
++            android:fontFamily="sans-serif-light" />
++
++    <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="4dp"
++            android:text="@string/warning_hint"
++            android:textColor="@color/ladrok_muted"
++            android:textSize="18sp" />
++</LinearLayout>
+diff --git a/LadrokSleep/res/values/colors.xml b/LadrokSleep/res/values/colors.xml
+new file mode 100644
+index 0000000..e9e9051
+--- /dev/null
++++ b/LadrokSleep/res/values/colors.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- The Ladrok palette (see CONTEXT.md in ladrok-start): black, greys, no accent colour. -->
++<resources>
++    <color name="ladrok_black">#FF000000</color>
++    <color name="ladrok_raised">#FF121212</color>
++    <color name="ladrok_line">#FF262626</color>
++    <color name="ladrok_ink">#FFE4E4E4</color>
++    <color name="ladrok_muted">#FF8A8A8A</color>
++    <color name="ladrok_silver">#FFCFCFCF</color>
++</resources>
+diff --git a/LadrokSleep/res/values/strings.xml b/LadrokSleep/res/values/strings.xml
+new file mode 100644
+index 0000000..74593b2
+--- /dev/null
++++ b/LadrokSleep/res/values/strings.xml
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<resources>
++    <string name="app_name">Sleep timer</string>
++
++    <string name="notice_on">Sleep in %1$d min</string>
++    <string name="notice_off">Sleep timer off</string>
++
++    <string name="warning_countdown">Going to sleep in %1$d s</string>
++    <string name="warning_hint">Press OK to add 30 min</string>
++
++    <string name="state_off">Off</string>
++    <string name="state_minutes">Sleep in %1$d min</string>
++    <string name="state_seconds">Sleep in %1$d s</string>
++    <string name="description">When the timer ends, playback pauses, the TV turns off and Ladrok TV goes to sleep. The sleep key on Ladrok Remote sets it too.</string>
++
++    <string name="option_off">Off</string>
++    <string name="option_minutes">%1$d min</string>
++</resources>
+diff --git a/LadrokSleep/res/values/styles.xml b/LadrokSleep/res/values/styles.xml
+new file mode 100644
+index 0000000..fadaf57
+--- /dev/null
++++ b/LadrokSleep/res/values/styles.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<resources>
++    <style name="Theme.LadrokSleep" parent="@android:style/Theme.DeviceDefault.NoActionBar">
++        <item name="android:windowBackground">@color/ladrok_black</item>
++        <item name="android:colorBackground">@color/ladrok_black</item>
++        <item name="android:textColorPrimary">@color/ladrok_ink</item>
++        <item name="android:windowAnimationStyle">@null</item>
++    </style>
++
++    <style name="Ladrok.Pill" parent="">
++        <item name="android:layout_width">wrap_content</item>
++        <item name="android:layout_height">48dp</item>
++        <item name="android:layout_marginEnd">12dp</item>
++        <item name="android:paddingStart">28dp</item>
++        <item name="android:paddingEnd">28dp</item>
++        <item name="android:background">@drawable/pill</item>
++        <item name="android:textColor">@color/pill_text</item>
++        <item name="android:textSize">18sp</item>
++        <item name="android:textAllCaps">false</item>
++        <item name="android:stateListAnimator">@null</item>
++        <item name="android:focusable">true</item>
++    </style>
++</resources>
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/AlarmReceiver.java b/LadrokSleep/src/tv/ladrok/sleep/AlarmReceiver.java
+new file mode 100644
+index 0000000..d1fbe1d
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/AlarmReceiver.java
+@@ -0,0 +1,80 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.hardware.hdmi.HdmiDeviceInfo;
++import android.hardware.hdmi.IHdmiControlService;
++import android.media.AudioManager;
++import android.os.Handler;
++import android.os.Looper;
++import android.os.PowerManager;
++import android.os.RemoteException;
++import android.os.ServiceManager;
++import android.os.SystemClock;
++import android.util.Log;
++import android.view.KeyEvent;
++
++/** The two alarms: the warning 60 s before the end, and the end itself. */
++public class AlarmReceiver extends BroadcastReceiver {
++    /** Time for the player to act on the pause key before the screen goes off. */
++    private static final long PAUSE_SETTLE_MS = 1000;
++
++    @Override
++    public void onReceive(Context context, Intent intent) {
++        if (!SleepTimer.isOn(context)) return;
++        PowerManager pm = context.getSystemService(PowerManager.class);
++        if (SleepTimer.ACTION_WARN.equals(intent.getAction())) {
++            if (pm.isInteractive() && SleepTimer.remaining(context) > 0) {
++                Warning.show(context);
++            }
++        } else if (SleepTimer.ACTION_END.equals(intent.getAction())) {
++            // An alarm left over from before an extension: the new one is already set
++            if (SleepTimer.remaining(context) > 1000) return;
++            end(context, pm, goAsync());
++        }
++    }
++
++    /** Pause, CEC <Standby>, then sleep. Without CEC the box still sleeps and the TV loses signal. */
++    private static void end(Context context, PowerManager pm, PendingResult result) {
++        SleepTimer.off(context);
++        if (!pm.isInteractive()) {
++            // Already asleep (turned off by hand): nothing left to do
++            result.finish();
++            return;
++        }
++        Log.i(SleepTimer.TAG, "timer ended: pausing playback and going to sleep");
++        AudioManager audio = context.getSystemService(AudioManager.class);
++        audio.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE));
++        audio.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE));
++        sendCecStandby();
++        new Handler(Looper.getMainLooper()).postDelayed(() -> {
++            pm.goToSleep(SystemClock.uptimeMillis());
++            result.finish();
++        }, PAUSE_SETTLE_MS);
++    }
++
++    /**
++     * Going to sleep sends <Standby> by itself only while this box is the active source, and it
++     * stops being one when the TV sends <Routing Change> (as some TVs do at power on), although
++     * the TV still shows it. So it is sent here, as power_control_mode says (broadcast by
++     * default).
++     */
++    private static void sendCecStandby() {
++        IHdmiControlService hdmi = IHdmiControlService.Stub.asInterface(
++                ServiceManager.getService(Context.HDMI_CONTROL_SERVICE));
++        if (hdmi == null) {
++            Log.i(SleepTimer.TAG, "no HDMI-CEC, sleeping without <Standby>");
++            return;
++        }
++        try {
++            hdmi.sendStandby(HdmiDeviceInfo.DEVICE_PLAYBACK, 0);
++        } catch (RemoteException | RuntimeException e) {
++            Log.w(SleepTimer.TAG, "CEC <Standby> failed", e);
++        }
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/DebugReceiver.java b/LadrokSleep/src/tv/ladrok/sleep/DebugReceiver.java
+new file mode 100644
+index 0000000..54084fc
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/DebugReceiver.java
+@@ -0,0 +1,28 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.os.Build;
++
++/**
++ * Testing without waiting half an hour: on userdebug/eng builds,
++ * {@code adb shell am broadcast -a tv.ladrok.sleep.SET -n tv.ladrok.sleep/.DebugReceiver
++ * --ei seconds 90} sets the timer to 90 s (0 turns it off). Needs DUMP, which adb shell has.
++ */
++public class DebugReceiver extends BroadcastReceiver {
++    @Override
++    public void onReceive(Context context, Intent intent) {
++        if (!Build.IS_DEBUGGABLE) return;
++        int seconds = intent.getIntExtra("seconds", 0);
++        if (seconds > 0) {
++            SleepTimer.start(context, seconds * 1000L, 0);
++        } else {
++            SleepTimer.off(context);
++        }
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/KeyReceiver.java b/LadrokSleep/src/tv/ladrok/sleep/KeyReceiver.java
+new file mode 100644
+index 0000000..a141ed4
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/KeyReceiver.java
+@@ -0,0 +1,28 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.view.KeyEvent;
++
++/**
++ * The sleep key (KEYCODE_BUTTON_1; HID Consumer 0x36 from Ladrok Remote): GlobalKeyManager
++ * sends it here instead of to the focused app. Each press moves to the next duration.
++ */
++public class KeyReceiver extends BroadcastReceiver {
++    @Override
++    public void onReceive(Context context, Intent intent) {
++        KeyEvent event = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent.class);
++        if (event == null || event.getAction() != KeyEvent.ACTION_DOWN
++                || event.getRepeatCount() != 0) {
++            return;
++        }
++        int minutes = SleepTimer.cycle(context);
++        Notice.show(context, minutes == 0 ? context.getString(R.string.notice_off)
++                : context.getString(R.string.notice_on, minutes));
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/Notice.java b/LadrokSleep/src/tv/ladrok/sleep/Notice.java
+new file mode 100644
+index 0000000..d0e59b8
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/Notice.java
+@@ -0,0 +1,65 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.content.Context;
++import android.graphics.PixelFormat;
++import android.hardware.display.DisplayManager;
++import android.os.Handler;
++import android.os.Looper;
++import android.view.Display;
++import android.view.Gravity;
++import android.view.LayoutInflater;
++import android.view.WindowManager;
++import android.widget.TextView;
++
++/**
++ * "Sleep in 60 min": a toast-like line at the top, over any app. Not a Toast, because NotificationManager
++ * drops an app's toasts after a few in quick succession, and the sleep key is pressed several
++ * times in a row to reach a duration; each press here replaces the text and restarts the timeout.
++ * It never takes focus or touches. Main thread only.
++ */
++final class Notice {
++    private static final long SHOW_MS = 2500;
++
++    private static final Handler sHandler = new Handler(Looper.getMainLooper());
++    private static final Runnable sHide = Notice::hide;
++    private static TextView sView;
++
++    private Notice() {}
++
++    static void show(Context context, String text) {
++        if (sView == null) {
++            Display display = context.getSystemService(DisplayManager.class)
++                    .getDisplay(Display.DEFAULT_DISPLAY);
++            Context wc = context.createWindowContext(display,
++                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
++            wc.setTheme(R.style.Theme_LadrokSleep);
++            sView = (TextView) LayoutInflater.from(wc).inflate(R.layout.notice, null);
++
++            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
++                    WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
++                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
++                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
++                            | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
++                    PixelFormat.TRANSLUCENT);
++            lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
++            lp.y = (int) (48 * wc.getResources().getDisplayMetrics().density);
++            lp.windowAnimations = android.R.style.Animation_Toast;
++            lp.setTitle("LadrokSleepNotice");
++            wc.getSystemService(WindowManager.class).addView(sView, lp);
++        }
++        sView.setText(text);
++        sHandler.removeCallbacks(sHide);
++        sHandler.postDelayed(sHide, SHOW_MS);
++    }
++
++    static void hide() {
++        if (sView == null) return;
++        sHandler.removeCallbacks(sHide);
++        sView.getContext().getSystemService(WindowManager.class).removeView(sView);
++        sView = null;
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java b/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java
+new file mode 100644
+index 0000000..1653798
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java
+@@ -0,0 +1,86 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.app.Activity;
++import android.os.Bundle;
++import android.os.Handler;
++import android.os.Looper;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.widget.Button;
++import android.widget.LinearLayout;
++import android.widget.TextView;
++
++/** Settings > Sleep timer: the time left, and Off / 30 / 60 / 90 / 120 min. */
++public class SleepActivity extends Activity {
++    private static final float FOCUS_SCALE = 1.05f;
++
++    private final Handler mHandler = new Handler(Looper.getMainLooper());
++    private final Runnable mRefresh = new Runnable() {
++        @Override
++        public void run() {
++            refresh();
++            mHandler.postDelayed(this, 1000);
++        }
++    };
++
++    private TextView mHeadline;
++    private final Button[] mOptions = new Button[SleepTimer.STEPS.length];
++
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.sleep_activity);
++        mHeadline = findViewById(R.id.headline);
++
++        View.OnFocusChangeListener grow = (v, hasFocus) -> v.animate()
++                .scaleX(hasFocus ? FOCUS_SCALE : 1f).scaleY(hasFocus ? FOCUS_SCALE : 1f)
++                .setDuration(120).start();
++        LinearLayout options = findViewById(R.id.options);
++        for (int i = 0; i < mOptions.length; i++) {
++            Button b = (Button) LayoutInflater.from(this).inflate(R.layout.option, options, false);
++            int minutes = SleepTimer.STEPS[i];
++            b.setText(minutes == 0 ? getString(R.string.option_off)
++                    : getString(R.string.option_minutes, minutes));
++            int step = i;
++            b.setOnClickListener(v -> {
++                SleepTimer.select(this, step);
++                refresh();
++            });
++            b.setOnFocusChangeListener(grow);
++            options.addView(b);
++            mOptions[i] = b;
++        }
++        mOptions[SleepTimer.step(this)].requestFocus();
++    }
++
++    @Override
++    protected void onResume() {
++        super.onResume();
++        mRefresh.run();
++    }
++
++    @Override
++    protected void onPause() {
++        super.onPause();
++        mHandler.removeCallbacks(mRefresh);
++    }
++
++    private void refresh() {
++        long left = SleepTimer.remaining(this);
++        if (!SleepTimer.isOn(this)) {
++            mHeadline.setText(R.string.state_off);
++        } else if (left < 60_000) {
++            mHeadline.setText(getString(R.string.state_seconds, (left + 999) / 1000));
++        } else {
++            mHeadline.setText(getString(R.string.state_minutes, (left + 59_999) / 60_000));
++        }
++        int step = SleepTimer.step(this);
++        for (int i = 0; i < mOptions.length; i++) {
++            mOptions[i].setActivated(i == step);
++        }
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/SleepTimer.java b/LadrokSleep/src/tv/ladrok/sleep/SleepTimer.java
+new file mode 100644
+index 0000000..5d57b59
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/SleepTimer.java
+@@ -0,0 +1,129 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.app.AlarmManager;
++import android.app.PendingIntent;
++import android.content.Context;
++import android.content.Intent;
++import android.content.SharedPreferences;
++import android.os.SystemClock;
++import android.provider.Settings;
++import android.util.Log;
++
++/**
++ * The timer: one deadline (elapsedRealtime) with two exact alarms, the warning 60 s before it
++ * and the end. The deadline is stored with the boot count, so it does not outlive a restart
++ * (the alarms do not either); key presses and other input never touch it.
++ */
++final class SleepTimer {
++    static final String TAG = "LadrokSleep";
++
++    /** The durations the sleep key and Settings cycle through, in minutes; 0 is off. */
++    static final int[] STEPS = {0, 30, 60, 90, 120};
++    static final long WARNING_MS = 60_000;
++    static final long EXTEND_MS = 30 * 60_000;
++
++    static final String ACTION_WARN = "tv.ladrok.sleep.WARN";
++    static final String ACTION_END = "tv.ladrok.sleep.END";
++
++    private static final String KEY_DEADLINE = "deadline";
++    private static final String KEY_STEP = "step";
++    private static final String KEY_BOOT = "boot";
++
++    private SleepTimer() {}
++
++    /** Time left in ms, or 0 when the timer is off. */
++    static long remaining(Context c) {
++        long deadline = deadline(c);
++        return deadline == 0 ? 0 : Math.max(0, deadline - SystemClock.elapsedRealtime());
++    }
++
++    static boolean isOn(Context c) {
++        return deadline(c) != 0;
++    }
++
++    /** The index in {@link #STEPS} last chosen, or 0 when the timer is off. */
++    static int step(Context c) {
++        return isOn(c) ? prefs(c).getInt(KEY_STEP, 0) : 0;
++    }
++
++    /** The sleep key: the next duration after the current one, Off after the longest. */
++    static int cycle(Context c) {
++        int next = (step(c) + 1) % STEPS.length;
++        select(c, next);
++        return STEPS[next];
++    }
++
++    /** Starts the timer at STEPS[step] minutes from now, or turns it off for step 0. */
++    static void select(Context c, int step) {
++        if (STEPS[step] == 0) {
++            off(c);
++        } else {
++            start(c, STEPS[step] * 60_000L, step);
++        }
++    }
++
++    /** Starts the timer {@code ms} from now; step is what the sleep key continues from. */
++    static void start(Context c, long ms, int step) {
++        long deadline = SystemClock.elapsedRealtime() + ms;
++        prefs(c).edit()
++                .putLong(KEY_DEADLINE, deadline)
++                .putInt(KEY_STEP, step)
++                .putInt(KEY_BOOT, bootCount(c))
++                .apply();
++        Warning.hide();
++        schedule(c, deadline);
++        Log.i(TAG, "timer set: " + ms / 1000 + " s");
++    }
++
++    /** OK on the warning: 30 more minutes. */
++    static void extend(Context c) {
++        long deadline = deadline(c);
++        if (deadline == 0) return;
++        deadline = Math.max(deadline, SystemClock.elapsedRealtime()) + EXTEND_MS;
++        prefs(c).edit().putLong(KEY_DEADLINE, deadline).apply();
++        Warning.hide();
++        schedule(c, deadline);
++        Log.i(TAG, "timer extended: " + remaining(c) / 1000 + " s left");
++    }
++
++    static void off(Context c) {
++        prefs(c).edit().clear().apply();
++        AlarmManager am = c.getSystemService(AlarmManager.class);
++        am.cancel(alarm(c, ACTION_WARN));
++        am.cancel(alarm(c, ACTION_END));
++        Warning.hide();
++        Log.i(TAG, "timer off");
++    }
++
++    private static long deadline(Context c) {
++        SharedPreferences p = prefs(c);
++        return p.getInt(KEY_BOOT, -1) == bootCount(c) ? p.getLong(KEY_DEADLINE, 0) : 0;
++    }
++
++    private static void schedule(Context c, long deadline) {
++        AlarmManager am = c.getSystemService(AlarmManager.class);
++        long warnAt = Math.max(SystemClock.elapsedRealtime(), deadline - WARNING_MS);
++        am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, warnAt,
++                alarm(c, ACTION_WARN));
++        am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, deadline,
++                alarm(c, ACTION_END));
++    }
++
++    private static PendingIntent alarm(Context c, String action) {
++        return PendingIntent.getBroadcast(c, 0, new Intent(action).setClass(c, AlarmReceiver.class),
++                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
++    }
++
++    private static SharedPreferences prefs(Context c) {
++        return c.createDeviceProtectedStorageContext()
++                .getSharedPreferences("timer", Context.MODE_PRIVATE);
++    }
++
++    private static int bootCount(Context c) {
++        return Settings.Global.getInt(c.getContentResolver(), Settings.Global.BOOT_COUNT, 0);
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/Warning.java b/LadrokSleep/src/tv/ladrok/sleep/Warning.java
+new file mode 100644
+index 0000000..c58d853
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/Warning.java
+@@ -0,0 +1,105 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.content.Context;
++import android.graphics.PixelFormat;
++import android.hardware.display.DisplayManager;
++import android.os.Handler;
++import android.os.Looper;
++import android.view.Display;
++import android.view.Gravity;
++import android.view.KeyEvent;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.WindowManager;
++import android.widget.FrameLayout;
++import android.widget.TextView;
++
++/**
++ * The warning over whatever is playing, at the top, clear of subtitles: "Going to sleep in N s". It takes key focus, so OK
++ * (30 more minutes) and Back (timer off) reach it and not the player; other keys go on as
++ * unhandled, so media keys still work. Main thread only.
++ */
++final class Warning {
++    private static final Handler sHandler = new Handler(Looper.getMainLooper());
++    private static View sView;
++    private static TextView sCountdown;
++    private static Context sContext;
++
++    private static final Runnable sTick = new Runnable() {
++        @Override
++        public void run() {
++            long seconds = (SleepTimer.remaining(sContext) + 999) / 1000;
++            sCountdown.setText(sContext.getString(R.string.warning_countdown, seconds));
++            sHandler.postDelayed(this, 250);
++        }
++    };
++
++    private Warning() {}
++
++    static void show(Context context) {
++        if (sView != null) return;
++        Notice.hide();
++        Display display = context.getSystemService(DisplayManager.class)
++                .getDisplay(Display.DEFAULT_DISPLAY);
++        Context wc = context.createWindowContext(display,
++                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
++        wc.setTheme(R.style.Theme_LadrokSleep);
++        sContext = wc;
++
++        FrameLayout root = new FrameLayout(wc) {
++            @Override
++            public boolean dispatchKeyEvent(KeyEvent event) {
++                switch (event.getKeyCode()) {
++                    case KeyEvent.KEYCODE_DPAD_CENTER:
++                    case KeyEvent.KEYCODE_ENTER:
++                    case KeyEvent.KEYCODE_NUMPAD_ENTER:
++                        if (event.getAction() == KeyEvent.ACTION_UP) {
++                            Context c = getContext();
++                            SleepTimer.extend(c);
++                            Notice.show(c, c.getString(R.string.notice_on,
++                                    (SleepTimer.remaining(c) + 59_999) / 60_000));
++                        }
++                        return true;
++                    case KeyEvent.KEYCODE_BACK:
++                        if (event.getAction() == KeyEvent.ACTION_UP) {
++                            SleepTimer.off(getContext());
++                            Notice.show(getContext(),
++                                    getContext().getString(R.string.notice_off));
++                        }
++                        return true;
++                    default:
++                        return super.dispatchKeyEvent(event);
++                }
++            }
++        };
++        root.setFocusable(true);
++        LayoutInflater.from(wc).inflate(R.layout.warning, root);
++        sCountdown = root.findViewById(R.id.countdown);
++
++        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
++                WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
++                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
++                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
++                PixelFormat.TRANSLUCENT);
++        lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
++        lp.y = (int) (48 * wc.getResources().getDisplayMetrics().density);
++        lp.setTitle("LadrokSleepWarning");
++        wc.getSystemService(WindowManager.class).addView(root, lp);
++        root.requestFocus();
++        sView = root;
++        sTick.run();
++    }
++
++    static void hide() {
++        if (sView == null) return;
++        sHandler.removeCallbacks(sTick);
++        sView.getContext().getSystemService(WindowManager.class).removeView(sView);
++        sView = null;
++        sCountdown = null;
++        sContext = null;
++    }
++}
+diff --git a/LadrokSleep/tv.ladrok.sleep.xml b/LadrokSleep/tv.ladrok.sleep.xml
+new file mode 100644
+index 0000000..9c78105
+--- /dev/null
++++ b/LadrokSleep/tv.ladrok.sleep.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- HDMI_CEC: <Standby> to the TV at the end. DEVICE_POWER (goToSleep) and
++     SYSTEM_APPLICATION_OVERLAY (the warning) are signature-only, from the platform certificate. -->
++<permissions>
++    <privapp-permissions package="tv.ladrok.sleep">
++        <permission name="android.permission.HDMI_CEC"/>
++    </privapp-permissions>
++</permissions>
 diff --git a/LadrokStore/.gitignore b/LadrokStore/.gitignore
 new file mode 100644
 index 0000000..c84e6e2
@@ -3142,7 +4074,7 @@ index 0000000..c4b1b91
 +    </privapp-permissions>
 +</permissions>
 diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
-index 999ee18..948774b 100644
+index 999ee18..2832cb3 100644
 --- a/aosp_rpi5_tv.mk
 +++ b/aosp_rpi5_tv.mk
 @@ -19,17 +19,35 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
@@ -3185,10 +4117,15 @@ index 999ee18..948774b 100644
  
  # Keylayout
  PRODUCT_PACKAGES += \
-@@ -44,9 +62,21 @@ PRODUCT_PACKAGES += \
+@@ -44,9 +62,26 @@ PRODUCT_PACKAGES += \
      SettingsProviderTvRpiOverlay \
      WifiRpiOverlay
  
++# Sleep timer: the sleep key (KEYCODE_BUTTON_1, claimed in LadrokFrameworkOverlay) and
++# Settings > Sleep timer; warns 60 s ahead, then pauses playback, sends CEC standby and sleeps
++PRODUCT_PACKAGES += \
++    LadrokSleep
++
 +# Ladrok screensaver (clock); LadrokFrameworkOverlay makes it the default dream
 +PRODUCT_PACKAGES += \
 +    LadrokDream
@@ -27402,6 +28339,28 @@ index 0000000..cf51203
 +<resources>
 +    <string name="config_dreamsDefaultComponent" translatable="false">tv.ladrok.dream/tv.ladrok.dream.ClockDream</string>
 +</resources>
+diff --git a/overlay/LadrokFrameworkOverlay/res/xml/global_keys.xml b/overlay/LadrokFrameworkOverlay/res/xml/global_keys.xml
+new file mode 100644
+index 0000000..ac4a786
+--- /dev/null
++++ b/overlay/LadrokFrameworkOverlay/res/xml/global_keys.xml
+@@ -0,0 +1,16 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<!-- Keys sent only to the given component, as android.intent.action.GLOBAL_BUTTON with the
++     KeyEvent in android.intent.extra.KEY_EVENT, never to the focused app. -->
++<global_keys version="1">
++    <!-- From TvFrameworkOverlay -->
++    <key keyCode="KEYCODE_DVR" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
++    <key keyCode="KEYCODE_GUIDE" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
++    <key keyCode="KEYCODE_TV" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
++    <key keyCode="KEYCODE_TV_INPUT" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
++    <key keyCode="KEYCODE_PAIRING" component="com.android.tv.settings/.GlobalKeyReceiver" dispatchWhenNonInteractive="true" />
++
++    <!-- Sleep timer key: Ladrok Remote sends HID Consumer 0x36, which Linux maps to BTN_MISC
++         and Generic.kl to BUTTON_1 (KEYCODE_SLEEP would sleep the box at once) -->
++    <key keyCode="KEYCODE_BUTTON_1" component="tv.ladrok.sleep/.KeyReceiver" />
++</global_keys>
 diff --git a/overlay/LadrokKeyboardOverlay/Android.bp b/overlay/LadrokKeyboardOverlay/Android.bp
 new file mode 100644
 index 0000000..ea690c2

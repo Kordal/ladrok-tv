@@ -340,10 +340,27 @@ overlay("LadrokPackageInstallerOverlay", "tv.ladrok.overlay.packageinstaller", "
 
 # ---------------------------------------------------------------- framework: default screensaver
 # priority 1 > TvFrameworkOverlay (product, priority 0), which sets BasicDreams Colors.
+# global_keys.xml: an overlay replaces the whole file, so TvFrameworkOverlay's keys are copied in
+# (device/google/atv/overlay/TvFrameworkOverlay/res/xml/global_keys.xml) next to the sleep key.
 overlay("LadrokFrameworkOverlay", "tv.ladrok.overlay.framework", "android", priority=1, res={
     "values/config.xml": f'''{HDR}<resources>
     <string name="config_dreamsDefaultComponent" translatable="false">tv.ladrok.dream/tv.ladrok.dream.ClockDream</string>
 </resources>
+''',
+    "xml/global_keys.xml": f'''{HDR}<!-- Keys sent only to the given component, as android.intent.action.GLOBAL_BUTTON with the
+     KeyEvent in android.intent.extra.KEY_EVENT, never to the focused app. -->
+<global_keys version="1">
+    <!-- From TvFrameworkOverlay -->
+    <key keyCode="KEYCODE_DVR" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
+    <key keyCode="KEYCODE_GUIDE" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
+    <key keyCode="KEYCODE_TV" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
+    <key keyCode="KEYCODE_TV_INPUT" component="com.google.android.tv/.receiver.GlobalKeyReceiver" />
+    <key keyCode="KEYCODE_PAIRING" component="com.android.tv.settings/.GlobalKeyReceiver" dispatchWhenNonInteractive="true" />
+
+    <!-- Sleep timer key: Ladrok Remote sends HID Consumer 0x36, which Linux maps to BTN_MISC
+         and Generic.kl to BUTTON_1 (KEYCODE_SLEEP would sleep the box at once) -->
+    <key keyCode="KEYCODE_BUTTON_1" component="tv.ladrok.sleep/.KeyReceiver" />
+</global_keys>
 ''',
 })
 print("generated into", OUT)
