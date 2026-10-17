@@ -582,10 +582,10 @@ index 0000000..8acf40f
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java b/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java
 new file mode 100644
-index 0000000..01c2a08
+index 0000000..fbd8b50
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/ConfirmStep.java
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,65 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -607,11 +607,20 @@ index 0000000..01c2a08
 +    private String mTimeZone;
 +
 +    @Override
++    public void onCreate(Bundle savedInstanceState) {
++        // Once per step: the view (and its guidance) is rebuilt each time Back returns here.
++        mCountry = setup().country;
++        mTimeZone = setup().timeZone;
++        super.onCreate(savedInstanceState);
++    }
++
++    @Override
 +    @NonNull
 +    public Guidance onCreateGuidance(Bundle savedInstanceState) {
 +        SetupActivity setup = setup();
-+        mCountry = setup.country;
-+        mTimeZone = setup.timeZone;
++        // Back from an abandoned "Change country" lands here again: undo what it chose.
++        setup.country = mCountry;
++        setup.timeZone = mTimeZone;
 +        Locale ui = setup.locale;
 +        return new Guidance(getString(R.string.confirm_title),
 +                getString(R.string.confirm_desc,
@@ -631,14 +640,6 @@ index 0000000..01c2a08
 +                .id(1)
 +                .title(getString(R.string.confirm_change_country))
 +                .build());
-+    }
-+
-+    @Override
-+    public void onResume() {
-+        super.onResume();
-+        // Back from an abandoned "Change country" lands here again: undo what it chose.
-+        setup().country = mCountry;
-+        setup().timeZone = mTimeZone;
 +    }
 +
 +    @Override
