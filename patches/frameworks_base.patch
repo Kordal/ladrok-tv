@@ -1,0 +1,144 @@
+diff --git a/services/core/java/com/android/server/policy/GlobalKeyManager.java b/services/core/java/com/android/server/policy/GlobalKeyManager.java
+index ca2897eb4..5623a3d5b 100644
+--- a/services/core/java/com/android/server/policy/GlobalKeyManager.java
++++ b/services/core/java/com/android/server/policy/GlobalKeyManager.java
+@@ -16,11 +16,15 @@
+ package com.android.server.policy;
+ 
+ import android.content.ComponentName;
++import android.content.ContentResolver;
+ import android.content.Context;
+ import android.content.Intent;
+ import android.content.res.Resources;
+ import android.content.res.XmlResourceParser;
++import android.database.ContentObserver;
++import android.os.Handler;
+ import android.os.UserHandle;
++import android.provider.Settings;
+ import android.util.Log;
+ import android.util.SparseArray;
+ import android.view.KeyEvent;
+@@ -56,11 +60,76 @@ final class GlobalKeyManager {
+ 
+     private static final int GLOBAL_KEY_FILE_VERSION = 1;
+ 
++    /**
++     * Ladrok TV: Settings.Global key holding a key code the user picked in Settings > Sleep timer.
++     * That key does whatever KEYCODE_BUTTON_1 (the sleep key) does in global_keys.xml, so any
++     * remote can set the sleep timer. 0 (KEYCODE_UNKNOWN) or no value: none.
++     */
++    private static final String LADROK_SLEEP_KEY = "ladrok_sleep_key";
++
+     private final SparseArray<GlobalKeyAction> mKeyMapping = new SparseArray<>();
+     private boolean mBeganFromNonInteractive = false;
++    private volatile int mSleepKey = KeyEvent.KEYCODE_UNKNOWN;
+ 
+-    public GlobalKeyManager(Context context) {
++    public GlobalKeyManager(Context context, Handler handler) {
+         loadGlobalKeys(context);
++        observeSleepKey(context, handler);
++    }
++
++    /** The action for keyCode: its own entry, or BUTTON_1's for the user's sleep key. */
++    private GlobalKeyAction getAction(int keyCode) {
++        GlobalKeyAction action = mKeyMapping.get(keyCode);
++        if (action == null && keyCode != KeyEvent.KEYCODE_UNKNOWN && keyCode == mSleepKey) {
++            action = mKeyMapping.get(KeyEvent.KEYCODE_BUTTON_1);
++        }
++        return action;
++    }
++
++    private void observeSleepKey(Context context, Handler handler) {
++        final ContentResolver resolver = context.getContentResolver();
++        resolver.registerContentObserver(Settings.Global.getUriFor(LADROK_SLEEP_KEY), false,
++                new ContentObserver(handler) {
++                    @Override
++                    public void onChange(boolean selfChange) {
++                        readSleepKey(resolver);
++                    }
++                }, UserHandle.USER_ALL);
++        readSleepKey(resolver);
++    }
++
++    private void readSleepKey(ContentResolver resolver) {
++        int keyCode = Settings.Global.getInt(resolver, LADROK_SLEEP_KEY, KeyEvent.KEYCODE_UNKNOWN);
++        mSleepKey = isReservedKey(keyCode) ? KeyEvent.KEYCODE_UNKNOWN : keyCode;
++        Log.i(TAG, "sleep key: " + KeyEvent.keyCodeToString(mSleepKey));
++    }
++
++    /** Keys the system needs, never taken as the sleep key (LadrokSleep refuses them too). */
++    private static boolean isReservedKey(int keyCode) {
++        switch (keyCode) {
++            case KeyEvent.KEYCODE_POWER:
++            case KeyEvent.KEYCODE_SLEEP:
++            case KeyEvent.KEYCODE_WAKEUP:
++            case KeyEvent.KEYCODE_HOME:
++            case KeyEvent.KEYCODE_BACK:
++            case KeyEvent.KEYCODE_DPAD_UP:
++            case KeyEvent.KEYCODE_DPAD_DOWN:
++            case KeyEvent.KEYCODE_DPAD_LEFT:
++            case KeyEvent.KEYCODE_DPAD_RIGHT:
++            case KeyEvent.KEYCODE_DPAD_CENTER:
++            case KeyEvent.KEYCODE_DPAD_UP_LEFT:
++            case KeyEvent.KEYCODE_DPAD_UP_RIGHT:
++            case KeyEvent.KEYCODE_DPAD_DOWN_LEFT:
++            case KeyEvent.KEYCODE_DPAD_DOWN_RIGHT:
++            case KeyEvent.KEYCODE_ENTER:
++            case KeyEvent.KEYCODE_NUMPAD_ENTER:
++            case KeyEvent.KEYCODE_VOLUME_UP:
++            case KeyEvent.KEYCODE_VOLUME_DOWN:
++            case KeyEvent.KEYCODE_VOLUME_MUTE:
++            case KeyEvent.KEYCODE_MUTE:
++                return true;
++            default:
++                return false;
++        }
+     }
+ 
+     /**
+@@ -73,7 +142,7 @@ final class GlobalKeyManager {
+      */
+     boolean handleGlobalKey(Context context, int keyCode, KeyEvent event) {
+         if (mKeyMapping.size() > 0) {
+-            GlobalKeyAction action = mKeyMapping.get(keyCode);
++            GlobalKeyAction action = getAction(keyCode);
+             if (action != null) {
+                 final Intent intent = new GlobalKeyIntent(action.mComponentName, event,
+                         mBeganFromNonInteractive).getIntent();
+@@ -92,14 +161,14 @@ final class GlobalKeyManager {
+      * Returns {@code true} if the key will be handled globally.
+      */
+     boolean shouldHandleGlobalKey(int keyCode) {
+-        return mKeyMapping.get(keyCode) != null;
++        return getAction(keyCode) != null;
+     }
+ 
+     /**
+      * Returns {@code true} if the key will be handled globally.
+      */
+     boolean shouldDispatchFromNonInteractive(int keyCode) {
+-        final GlobalKeyAction action = mKeyMapping.get(keyCode);
++        final GlobalKeyAction action = getAction(keyCode);
+         if (action == null) {
+             return false;
+         }
+@@ -178,5 +247,6 @@ final class GlobalKeyManager {
+             pw.println(mKeyMapping.valueAt(i).mDispatchWhenNonInteractive);
+         }
+         pw.print(prefix); pw.println("}");
++        pw.print(prefix); pw.print("mSleepKey="); pw.println(KeyEvent.keyCodeToString(mSleepKey));
+     }
+ }
+diff --git a/services/core/java/com/android/server/policy/PhoneWindowManager.java b/services/core/java/com/android/server/policy/PhoneWindowManager.java
+index 1af1825d3..746787de7 100644
+--- a/services/core/java/com/android/server/policy/PhoneWindowManager.java
++++ b/services/core/java/com/android/server/policy/PhoneWindowManager.java
+@@ -2449,7 +2449,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
+ 
+         mVibrator = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
+ 
+-        mGlobalKeyManager = new GlobalKeyManager(mContext);
++        mGlobalKeyManager = new GlobalKeyManager(mContext, mHandler);
+ 
+         mKeyguardDrawnTimeoutMs = mContext.getResources().getInteger(
+                 com.android.internal.R.integer.config_keyguardDrawnTimeout);
