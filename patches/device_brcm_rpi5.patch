@@ -4348,10 +4348,10 @@ index 0000000..c4b1b91
 +    </privapp-permissions>
 +</permissions>
 diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
-index 999ee18..2832cb3 100644
+index 999ee18..7563f98 100644
 --- a/aosp_rpi5_tv.mk
 +++ b/aosp_rpi5_tv.mk
-@@ -19,17 +19,35 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
+@@ -19,17 +19,39 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
  PRODUCT_PACKAGES += \
      DocumentsUI \
      LeanbackIME \
@@ -4359,6 +4359,7 @@ index 999ee18..2832cb3 100644
 -    TvSampleLeanbackLauncher \
      TvSettingsTwoPanel
  
+-# Bluetooth
 +# Home screen: Ladrok Launcher (prebuilt from github.com/Kordal/ladrok-start); replaces TvSampleLeanbackLauncher
 +PRODUCT_PACKAGES += \
 +    LadrokLauncher
@@ -4379,9 +4380,14 @@ index 999ee18..2832cb3 100644
 +PRODUCT_PACKAGES += \
 +    LadrokRemoteHelper
 +
- # Bluetooth
++# Bluetooth. No sink side: a phone paired as a remote must not play its audio on the TV
++# (A2DP sink, AVRCP controller). Headphones (A2DP source, AVRCP target, HFP AG) and remotes
++# (HID host) stay.
  PRODUCT_VENDOR_PROPERTIES += \
-     bluetooth.device.class_of_device=34,4,36
+-    bluetooth.device.class_of_device=34,4,36
++    bluetooth.device.class_of_device=34,4,36 \
++    bluetooth.profile.a2dp.sink.enabled=false \
++    bluetooth.profile.avrcp.controller.enabled=false
  
 -# Boot animation
 +# Boot animation (Ladrok TV logo; regenerate with tools/make-logo-assets.py in the drot repo)
@@ -4391,7 +4397,7 @@ index 999ee18..2832cb3 100644
  
  # Keylayout
  PRODUCT_PACKAGES += \
-@@ -44,9 +62,26 @@ PRODUCT_PACKAGES += \
+@@ -44,9 +66,26 @@ PRODUCT_PACKAGES += \
      SettingsProviderTvRpiOverlay \
      WifiRpiOverlay
  
