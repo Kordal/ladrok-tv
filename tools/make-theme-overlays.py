@@ -335,8 +335,9 @@ overlay("LadrokPackageInstallerOverlay", "tv.ladrok.overlay.packageinstaller", "
     "layout/lb_guidedstep_background.xml": guidedstep_bg,
 })
 
-# PermissionController (TV grant dialog) is not themed: it lives in the com.android.permission
-# APEX and declares <overlayable>, and none of its TV colours are in it, so idmap2 rejects an RRO.
+# PermissionController (TV permissions panel, grant dialog) can't take an RRO: it lives in the
+# com.android.permission APEX and declares <overlayable>, and none of its TV colours are in it,
+# so idmap2 rejects one. It is themed in its source instead: patches/packages_modules_Permission.patch.
 
 # ---------------------------------------------------------------- framework: default screensaver
 # priority 1 > TvFrameworkOverlay (product, priority 0), which sets BasicDreams Colors.
