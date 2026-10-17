@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make Ladrok TV artwork from the logo PNG (silver line logo on a dark background).
+"""Make Ladrok TV artwork from the logo PNG (the silver Slash mark over LADROK on a dark background).
 
   python3 tools/make-logo-assets.py <logo.png> <aosp device/brcm/rpi5 dir> <repo public dir>
 
@@ -35,7 +35,7 @@ logo = img.point(lambda v: 0 if v <= lo else min(255, int((v - lo) * 255 / (peak
 solid = logo.point(lambda v: 255 if v > 90 else 0)
 x0, y0, x1, y1 = solid.getbbox()
 bbox = (max(0, x0 - 4), max(0, y0 - 4), min(w, x1 + 4), min(h, y1 + 4))
-# Split the mark (the frame) from the "LADROK" text at the empty rows between them.
+# Split the mark (the Slash) from the "LADROK" text at the empty rows between them.
 rows = [max(solid.crop((bbox[0], y, bbox[2], y + 1)).getdata()) for y in range(bbox[1], bbox[3])]
 gap = None
 run = 0
