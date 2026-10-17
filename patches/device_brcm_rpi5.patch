@@ -47,6 +47,174 @@ index 89cbc00..b4be365 100644
  
  # Treble
  TARGET_COPY_OUT_VENDOR := vendor
+diff --git a/LadrokDream/Android.bp b/LadrokDream/Android.bp
+new file mode 100644
+index 0000000..e57ee5d
+--- /dev/null
++++ b/LadrokDream/Android.bp
+@@ -0,0 +1,16 @@
++//
++// SPDX-License-Identifier: Apache-2.0
++//
++// Screensaver: a dim clock and date on black that moves a little every minute.
++
++android_app {
++    name: "LadrokDream",
++    srcs: ["src/**/*.java"],
++    resource_dirs: ["res"],
++    sdk_version: "current",
++    system_ext_specific: true,
++    certificate: "platform",
++    optimize: {
++        enabled: false,
++    },
++}
+diff --git a/LadrokDream/AndroidManifest.xml b/LadrokDream/AndroidManifest.xml
+new file mode 100644
+index 0000000..347650b
+--- /dev/null
++++ b/LadrokDream/AndroidManifest.xml
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++        package="tv.ladrok.dream">
++
++    <application android:label="@string/app_name">
++        <service android:name=".ClockDream"
++                android:label="@string/dream_name"
++                android:exported="true"
++                android:permission="android.permission.BIND_DREAM_SERVICE">
++            <intent-filter>
++                <action android:name="android.service.dreams.DreamService" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++        </service>
++    </application>
++</manifest>
+diff --git a/LadrokDream/res/layout/clock_dream.xml b/LadrokDream/res/layout/clock_dream.xml
+new file mode 100644
+index 0000000..8981ec8
+--- /dev/null
++++ b/LadrokDream/res/layout/clock_dream.xml
+@@ -0,0 +1,33 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Muted clock and a darker date on black. ClockDream moves the block around. -->
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:background="#FF000000">
++
++    <LinearLayout
++            android:id="@+id/clock"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:orientation="vertical">
++
++        <TextClock
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:format12Hour="h:mm"
++                android:format24Hour="HH:mm"
++                android:fontFamily="sans-serif-light"
++                android:textColor="#FF8A8A8A"
++                android:textSize="100sp" />
++
++        <TextClock
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginStart="6dp"
++                android:format12Hour="EEEE d MMMM"
++                android:format24Hour="EEEE d MMMM"
++                android:textColor="#FF4A4A4A"
++                android:textSize="20sp" />
++    </LinearLayout>
++</FrameLayout>
+diff --git a/LadrokDream/res/values/strings.xml b/LadrokDream/res/values/strings.xml
+new file mode 100644
+index 0000000..1f665c8
+--- /dev/null
++++ b/LadrokDream/res/values/strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<resources>
++    <string name="app_name">Ladrok screensaver</string>
++    <string name="dream_name">Clock</string>
++</resources>
+diff --git a/LadrokDream/src/tv/ladrok/dream/ClockDream.java b/LadrokDream/src/tv/ladrok/dream/ClockDream.java
+new file mode 100644
+index 0000000..d1ecff8
+--- /dev/null
++++ b/LadrokDream/src/tv/ladrok/dream/ClockDream.java
+@@ -0,0 +1,66 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.dream;
++
++import android.service.dreams.DreamService;
++import android.view.View;
++
++import java.util.Random;
++
++/** The Ladrok screensaver: a dim clock that moves every minute so nothing burns in. */
++public class ClockDream extends DreamService {
++    private static final long MOVE_EVERY_MS = 60_000;
++    private static final long FADE_MS = 1_000;
++
++    private final Random mRandom = new Random();
++    private View mRoot;
++    private View mClock;
++
++    private final Runnable mMove = new Runnable() {
++        @Override
++        public void run() {
++            move();
++            mRoot.postDelayed(this, MOVE_EVERY_MS);
++        }
++    };
++
++    @Override
++    public void onAttachedToWindow() {
++        super.onAttachedToWindow();
++        setInteractive(false);
++        setFullscreen(true);
++        setScreenBright(false);
++        setContentView(R.layout.clock_dream);
++        mRoot = findViewById(android.R.id.content);
++        mClock = findViewById(R.id.clock);
++    }
++
++    @Override
++    public void onDreamingStarted() {
++        super.onDreamingStarted();
++        mClock.setAlpha(0f);
++        mRoot.post(mMove);
++    }
++
++    @Override
++    public void onDreamingStopped() {
++        mRoot.removeCallbacks(mMove);
++        super.onDreamingStopped();
++    }
++
++    /** Fades out, jumps to a random spot inside the screen, fades back in. */
++    private void move() {
++        int maxX = Math.max(0, mRoot.getWidth() - mClock.getWidth());
++        int maxY = Math.max(0, mRoot.getHeight() - mClock.getHeight());
++        float x = mRandom.nextInt(maxX + 1);
++        float y = mRandom.nextInt(maxY + 1);
++        mClock.animate().alpha(0f).setDuration(mClock.getAlpha() > 0 ? FADE_MS : 0)
++                .withEndAction(() -> {
++                    mClock.setTranslationX(x);
++                    mClock.setTranslationY(y);
++                    mClock.animate().alpha(1f).setDuration(FADE_MS).start();
++                }).start();
++    }
++}
 diff --git a/LadrokLauncher/.gitignore b/LadrokLauncher/.gitignore
 new file mode 100644
 index 0000000..e150a81
@@ -482,15 +650,20 @@ index 0000000..1b46344
 +</resources>
 diff --git a/LadrokSetup/res/values/styles.xml b/LadrokSetup/res/values/styles.xml
 new file mode 100644
-index 0000000..15ac7d1
+index 0000000..90697f4
 --- /dev/null
 +++ b/LadrokSetup/res/values/styles.xml
-@@ -0,0 +1,7 @@
+@@ -0,0 +1,12 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Ladrok palette on the leanback guided step: both panels black, the focused row on Line. -->
 +<resources>
 +    <style name="Theme.LadrokSetup" parent="Theme.Leanback.GuidedStep">
 +        <item name="android:windowBackground">@android:color/black</item>
++        <item name="guidedStepBackground">@android:color/black</item>
++        <item name="guidedActionsBackground">@android:color/black</item>
++        <item name="guidedActionsBackgroundDark">@android:color/black</item>
++        <item name="guidedActionsSelectorDrawable">@drawable/row_selector</item>
 +    </style>
 +</resources>
 diff --git a/LadrokSetup/src/tv/ladrok/setup/BaseStep.java b/LadrokSetup/src/tv/ladrok/setup/BaseStep.java
@@ -1139,6 +1312,19 @@ index 0000000..d38fcb0
 +        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
 +    </privapp-permissions>
 +</permissions>
+diff --git a/LadrokSetup/res/drawable/row_selector.xml b/LadrokSetup/res/drawable/row_selector.xml
+new file mode 100644
+index 0000000..8f4dcfa
+--- /dev/null
++++ b/LadrokSetup/res/drawable/row_selector.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Focused row: Line (#262626) fill with rounded corners, as in Ladrok Store. -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
++    <corners android:radius="8dp" />
++    <solid android:color="#FF262626" />
++</shape>
 diff --git a/LadrokStore/.gitignore b/LadrokStore/.gitignore
 new file mode 100644
 index 0000000..c84e6e2
@@ -1202,10 +1388,10 @@ index 0000000..07434da
 +</permissions>
 diff --git a/LadrokUpdater/Android.bp b/LadrokUpdater/Android.bp
 new file mode 100644
-index 0000000..5236599
+index 0000000..3ac42ac
 --- /dev/null
 +++ b/LadrokUpdater/Android.bp
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,27 @@
 +//
 +// SPDX-License-Identifier: Apache-2.0
 +//
@@ -1220,9 +1406,6 @@ index 0000000..5236599
 +    system_ext_specific: true,
 +    certificate: "platform",
 +    privileged: true,
-+    static_libs: [
-+        "androidx.leanback_leanback",
-+    ],
 +    required: ["privapp_whitelist_tv.ladrok.updater"],
 +    optimize: {
 +        enabled: false,
@@ -1840,10 +2023,10 @@ index 0000000..7545e69
 +</resources>
 diff --git a/LadrokUpdater/res/values/strings.xml b/LadrokUpdater/res/values/strings.xml
 new file mode 100644
-index 0000000..3da43a2
+index 0000000..3131eea
 --- /dev/null
 +++ b/LadrokUpdater/res/values/strings.xml
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,43 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
@@ -1869,6 +2052,11 @@ index 0000000..3da43a2
 +    <string name="no_repo">No update source is configured in this build.</string>
 +    <string name="needs_reflash">version %1$s uses a new SD-card layout and can\'t be installed as an update. Write the new card image to install it (this erases the TV\'s apps and settings).</string>
 +
++    <string name="headline_up_to_date">Up to date</string>
++    <string name="headline_checking">Checking…</string>
++    <string name="fact_this_tv">This TV</string>
++    <string name="fact_size">Size</string>
++
 +    <string name="action_check">Check for updates</string>
 +    <string name="action_download">Download</string>
 +    <string name="action_install">Install now</string>
@@ -1884,14 +2072,41 @@ index 0000000..3da43a2
 +</resources>
 diff --git a/LadrokUpdater/res/values/styles.xml b/LadrokUpdater/res/values/styles.xml
 new file mode 100644
-index 0000000..eeb99ca
+index 0000000..b6fcef2
 --- /dev/null
 +++ b/LadrokUpdater/res/values/styles.xml
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,32 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
-+    <style name="Theme.LadrokUpdater" parent="Theme.Leanback.GuidedStep" />
++    <style name="Theme.LadrokUpdater" parent="@android:style/Theme.DeviceDefault.NoActionBar">
++        <item name="android:windowBackground">@color/ladrok_black</item>
++        <item name="android:colorBackground">@color/ladrok_black</item>
++        <item name="android:textColorPrimary">@color/ladrok_ink</item>
++        <item name="android:windowAnimationStyle">@null</item>
++    </style>
++
++    <style name="Ladrok.Pill">
++        <item name="android:layout_width">wrap_content</item>
++        <item name="android:layout_height">48dp</item>
++        <item name="android:layout_marginEnd">12dp</item>
++        <item name="android:paddingStart">28dp</item>
++        <item name="android:paddingEnd">28dp</item>
++        <item name="android:background">@drawable/pill</item>
++        <item name="android:textColor">@color/pill_text</item>
++        <item name="android:textSize">18sp</item>
++        <item name="android:textAllCaps">false</item>
++        <item name="android:stateListAnimator">@null</item>
++        <item name="android:focusable">true</item>
++    </style>
++
++    <style name="Ladrok.Fact">
++        <item name="android:layout_width">wrap_content</item>
++        <item name="android:layout_height">wrap_content</item>
++        <item name="android:layout_marginEnd">48dp</item>
++        <item name="android:textColor">@color/ladrok_ink</item>
++        <item name="android:textSize">18sp</item>
++    </style>
 +</resources>
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/BootReceiver.java b/LadrokUpdater/src/tv/ladrok/updater/BootReceiver.java
 new file mode 100644
@@ -1986,180 +2201,188 @@ index 0000000..a3a9d65
 +}
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
 new file mode 100644
-index 0000000..2d9aba6
+index 0000000..2ecdc5c
 --- /dev/null
 +++ b/LadrokUpdater/src/tv/ladrok/updater/UpdateActivity.java
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,180 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
 +
 +package tv.ladrok.updater;
 +
++import android.app.Activity;
 +import android.os.Build;
 +import android.os.Bundle;
 +import android.os.Handler;
 +import android.os.Looper;
-+import android.text.format.DateFormat;
++import android.text.SpannableStringBuilder;
++import android.text.Spanned;
 +import android.text.format.Formatter;
-+
-+import androidx.annotation.NonNull;
-+import androidx.fragment.app.FragmentActivity;
-+import androidx.leanback.app.GuidedStepSupportFragment;
-+import androidx.leanback.widget.GuidanceStylist.Guidance;
-+import androidx.leanback.widget.GuidedAction;
-+
-+import java.util.ArrayList;
-+import java.util.List;
++import android.text.style.ForegroundColorSpan;
++import android.text.style.RelativeSizeSpan;
++import android.view.View;
++import android.widget.Button;
++import android.widget.ProgressBar;
++import android.widget.TextView;
 +
 +/** Shows the update state and offers the next step (check, install, restart). */
-+public class UpdateActivity extends FragmentActivity {
++public class UpdateActivity extends Activity {
++    private static final float FOCUS_SCALE = 1.05f;
++
++    private final Handler mHandler = new Handler(Looper.getMainLooper());
++    private final Runnable mRefresh = new Runnable() {
++        @Override
++        public void run() {
++            refresh();
++            mHandler.postDelayed(this, 1000);
++        }
++    };
++
++    private TextView mHeadline;
++    private TextView mState;
++    private ProgressBar mProgress;
++    private Button mPrimary;
++    private Button mLater;
++    private TextView mSize;
++    private Updater.State mShownState;
++
 +    @Override
 +    protected void onCreate(Bundle savedInstanceState) {
-+        super.onCreate(null);
-+        GuidedStepSupportFragment.addAsRoot(this, new UpdateFragment(), android.R.id.content);
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.update_activity);
++        mHeadline = findViewById(R.id.headline);
++        mState = findViewById(R.id.state);
++        mProgress = findViewById(R.id.progress);
++        mPrimary = findViewById(R.id.primary);
++        mLater = findViewById(R.id.later);
++        mSize = findViewById(R.id.fact_size);
++        ((TextView) findViewById(R.id.fact_current)).setText(
++                fact(Build.VERSION.INCREMENTAL, getString(R.string.fact_this_tv)));
++
++        View.OnFocusChangeListener grow = (v, hasFocus) -> v.animate()
++                .scaleX(hasFocus ? FOCUS_SCALE : 1f).scaleY(hasFocus ? FOCUS_SCALE : 1f)
++                .setDuration(120).start();
++        mPrimary.setOnFocusChangeListener(grow);
++        mLater.setOnFocusChangeListener(grow);
++        mPrimary.setOnClickListener(v -> onPrimary());
++        mLater.setOnClickListener(v -> finish());
 +    }
 +
-+    public static class UpdateFragment extends GuidedStepSupportFragment {
-+        private static final long ACTION_CHECK = 1;
-+        private static final long ACTION_INSTALL = 2;
-+        private static final long ACTION_REBOOT = 3;
-+        private static final long ACTION_LATER = 4;
++    @Override
++    protected void onResume() {
++        super.onResume();
++        mShownState = null;
++        mHandler.post(mRefresh);
++    }
 +
-+        private final Handler mHandler = new Handler(Looper.getMainLooper());
-+        private final Runnable mRefresh = new Runnable() {
-+            @Override
-+            public void run() {
-+                refresh();
-+                mHandler.postDelayed(this, 1000);
-+            }
-+        };
-+        private String mShown;
++    @Override
++    protected void onPause() {
++        mHandler.removeCallbacks(mRefresh);
++        super.onPause();
++    }
 +
-+        @Override
-+        @NonNull
-+        public Guidance onCreateGuidance(Bundle savedInstanceState) {
-+            return new Guidance(getString(R.string.app_name), describe(), null,
-+                    requireContext().getDrawable(R.drawable.ic_launcher));
++    private void onPrimary() {
++        switch (Updater.get(this).state()) {
++            case READY:
++                UpdateService.start(this, UpdateService.ACTION_INSTALL);
++                break;
++            case NEED_REBOOT:
++                UpdateService.start(this, UpdateService.ACTION_REBOOT);
++                break;
++            default:
++                UpdateService.start(this, UpdateService.ACTION_CHECK);
++                break;
++        }
++    }
++
++    private void refresh() {
++        Updater u = Updater.get(this);
++        Updater.State state = u.state();
++        UpdateConfig c = u.config();
++        String v = c != null ? c.version : "";
++
++        String headline;
++        String line;
++        int primary = 0;
++        boolean showProgress = false;
++        switch (state) {
++            case CHECKING:
++                headline = getString(R.string.headline_checking);
++                line = getString(R.string.state_checking);
++                break;
++            case UP_TO_DATE:
++                headline = getString(R.string.headline_up_to_date);
++                line = getString(R.string.state_up_to_date);
++                primary = R.string.action_check;
++                break;
++            case DOWNLOADING:
++                headline = v;
++                line = getString(R.string.state_downloading, v, u.progress());
++                showProgress = true;
++                break;
++            case READY:
++                headline = v;
++                line = getString(R.string.state_ready, v) + " " + getString(R.string.action_install_desc);
++                primary = R.string.action_install;
++                break;
++            case INSTALLING:
++                headline = v;
++                line = getString(R.string.state_installing, v, u.progress());
++                showProgress = true;
++                break;
++            case NEED_REBOOT:
++                headline = v;
++                line = getString(R.string.state_need_reboot, v);
++                primary = R.string.action_reboot;
++                break;
++            case UPDATED:
++                headline = v;
++                line = getString(R.string.state_updated, v);
++                primary = R.string.action_check;
++                break;
++            case ERROR:
++                headline = getString(R.string.app_name);
++                line = getString(R.string.state_error, u.error());
++                primary = R.string.action_check;
++                break;
++            default:
++                headline = Build.VERSION.INCREMENTAL;
++                line = getString(R.string.state_idle);
++                primary = R.string.action_check;
++                break;
 +        }
 +
-+        @Override
-+        public void onCreateActions(@NonNull List<GuidedAction> actions, Bundle savedInstanceState) {
-+            actions.addAll(actionsFor(Updater.get(requireContext()).state()));
++        mHeadline.setText(headline);
++        mState.setText(line);
++        mProgress.setVisibility(showProgress ? View.VISIBLE : View.GONE);
++        mProgress.setProgress(u.progress());
++
++        boolean showSize = c != null && c.size > 0
++                && (state == Updater.State.DOWNLOADING || state == Updater.State.READY);
++        mSize.setVisibility(showSize ? View.VISIBLE : View.GONE);
++        if (showSize) {
++            mSize.setText(fact(Formatter.formatShortFileSize(this, c.size),
++                    getString(R.string.fact_size)));
 +        }
 +
-+        @Override
-+        public void onResume() {
-+            super.onResume();
-+            mHandler.post(mRefresh);
-+        }
++        if (state == mShownState) return;
++        mShownState = state;
++        mPrimary.setVisibility(primary != 0 ? View.VISIBLE : View.GONE);
++        if (primary != 0) mPrimary.setText(primary);
++        // Keep the D-pad on the main action when there is one.
++        (primary != 0 ? mPrimary : mLater).requestFocus();
++    }
 +
-+        @Override
-+        public void onPause() {
-+            mHandler.removeCallbacks(mRefresh);
-+            super.onPause();
-+        }
-+
-+        @Override
-+        public void onGuidedActionClicked(GuidedAction action) {
-+            long id = action.getId();
-+            if (id == ACTION_CHECK) {
-+                UpdateService.start(requireContext(), UpdateService.ACTION_CHECK);
-+            } else if (id == ACTION_INSTALL) {
-+                UpdateService.start(requireContext(), UpdateService.ACTION_INSTALL);
-+            } else if (id == ACTION_REBOOT) {
-+                UpdateService.start(requireContext(), UpdateService.ACTION_REBOOT);
-+            } else {
-+                requireActivity().finish();
-+            }
-+        }
-+
-+        private void refresh() {
-+            Updater u = Updater.get(requireContext());
-+            String text = describe();
-+            String key = u.state() + "|" + text;
-+            if (key.equals(mShown)) return;
-+            boolean stateChanged = mShown == null || !mShown.startsWith(u.state() + "|");
-+            mShown = key;
-+            if (getGuidanceStylist().getDescriptionView() != null) {
-+                getGuidanceStylist().getDescriptionView().setText(text);
-+            }
-+            if (stateChanged) {
-+                setActions(actionsFor(u.state()));
-+                // Keep the D-pad on the main action (setActions would leave it on "Later").
-+                setSelectedActionPosition(0);
-+            }
-+        }
-+
-+        private List<GuidedAction> actionsFor(Updater.State state) {
-+            List<GuidedAction> list = new ArrayList<>();
-+            switch (state) {
-+                case READY:
-+                    list.add(action(ACTION_INSTALL, R.string.action_install,
-+                            getString(R.string.action_install_desc)));
-+                    break;
-+                case NEED_REBOOT:
-+                    list.add(action(ACTION_REBOOT, R.string.action_reboot, null));
-+                    break;
-+                case CHECKING:
-+                case DOWNLOADING:
-+                case INSTALLING:
-+                    break;
-+                default:
-+                    list.add(action(ACTION_CHECK, R.string.action_check, null));
-+                    break;
-+            }
-+            list.add(action(ACTION_LATER, R.string.action_later, null));
-+            return list;
-+        }
-+
-+        private GuidedAction action(long id, int title, String description) {
-+            return new GuidedAction.Builder(requireContext())
-+                    .id(id)
-+                    .title(getString(title))
-+                    .description(description)
-+                    .build();
-+        }
-+
-+        private String describe() {
-+            Updater u = Updater.get(requireContext());
-+            UpdateConfig c = u.config();
-+            String v = c != null ? c.version : "";
-+            String current = getString(R.string.current_version, Build.VERSION.INCREMENTAL,
-+                    DateFormat.getMediumDateFormat(requireContext()).format(Build.TIME));
-+            String state;
-+            switch (u.state()) {
-+                case CHECKING:
-+                    state = getString(R.string.state_checking);
-+                    break;
-+                case UP_TO_DATE:
-+                    state = getString(R.string.state_up_to_date);
-+                    break;
-+                case DOWNLOADING:
-+                    state = getString(R.string.state_downloading, v, u.progress());
-+                    break;
-+                case READY:
-+                    state = getString(R.string.state_ready, v) + "\n"
-+                            + Formatter.formatShortFileSize(requireContext(), c != null ? c.size : 0);
-+                    break;
-+                case INSTALLING:
-+                    state = getString(R.string.state_installing, v, u.progress());
-+                    break;
-+                case NEED_REBOOT:
-+                    state = getString(R.string.state_need_reboot, v);
-+                    break;
-+                case UPDATED:
-+                    state = getString(R.string.state_updated, v);
-+                    break;
-+                case ERROR:
-+                    state = getString(R.string.state_error, u.error());
-+                    break;
-+                default:
-+                    state = getString(R.string.state_idle);
-+                    break;
-+            }
-+            return current + "\n\n" + state;
-+        }
++    /** A value with its muted label underneath, like the facts on a Store App page. */
++    private CharSequence fact(String value, String label) {
++        SpannableStringBuilder b = new SpannableStringBuilder(value).append('\n');
++        int start = b.length();
++        b.append(label);
++        b.setSpan(new ForegroundColorSpan(getColor(R.color.ladrok_muted)), start, b.length(),
++                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
++        b.setSpan(new RelativeSizeSpan(0.75f), start, b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
++        return b;
 +    }
 +}
 diff --git a/LadrokUpdater/src/tv/ladrok/updater/UpdateConfig.java b/LadrokUpdater/src/tv/ladrok/updater/UpdateConfig.java
@@ -2746,6 +2969,168 @@ index 0000000..c4b1b91
 +        <permission name="android.permission.START_FOREGROUND_SERVICES_FROM_BACKGROUND"/>
 +    </privapp-permissions>
 +</permissions>
+diff --git a/LadrokUpdater/res/color/pill_text.xml b/LadrokUpdater/res/color/pill_text.xml
+new file mode 100644
+index 0000000..4639d58
+--- /dev/null
++++ b/LadrokUpdater/res/color/pill_text.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true" android:color="@color/ladrok_black" />
++    <item android:color="@color/ladrok_ink" />
++</selector>
+diff --git a/LadrokUpdater/res/drawable/pill.xml b/LadrokUpdater/res/drawable/pill.xml
+new file mode 100644
+index 0000000..a096a5a
+--- /dev/null
++++ b/LadrokUpdater/res/drawable/pill.xml
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Ladrok pill: outlined at rest, inverted (Ink fill) when focused. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true">
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <solid android:color="@color/ladrok_ink" />
++        </shape>
++    </item>
++    <item>
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <stroke android:width="1dp" android:color="@color/ladrok_line" />
++        </shape>
++    </item>
++</selector>
+diff --git a/LadrokUpdater/res/drawable/progress.xml b/LadrokUpdater/res/drawable/progress.xml
+new file mode 100644
+index 0000000..c0b3801
+--- /dev/null
++++ b/LadrokUpdater/res/drawable/progress.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Thin Silver line on a Line track. -->
++<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:id="@android:id/background">
++        <shape><corners android:radius="2dp" /><solid android:color="@color/ladrok_line" /></shape>
++    </item>
++    <item android:id="@android:id/progress">
++        <clip><shape><corners android:radius="2dp" /><solid android:color="@color/ladrok_silver" /></shape></clip>
++    </item>
++</layer-list>
+diff --git a/LadrokUpdater/res/layout/update_activity.xml b/LadrokUpdater/res/layout/update_activity.xml
+new file mode 100644
+index 0000000..f6990da
+--- /dev/null
++++ b/LadrokUpdater/res/layout/update_activity.xml
+@@ -0,0 +1,87 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- System update, in the Launcher's layout: title top left, clock top right, the version as
++     the headline, one line of state, pills, and the facts at the bottom. Sizes are for a
++     960x540 dp (1080p) screen with 48dp overscan margins. -->
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:background="@color/ladrok_black"
++        android:paddingStart="48dp"
++        android:paddingEnd="48dp"
++        android:paddingTop="26dp"
++        android:paddingBottom="32dp">
++
++    <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="@string/app_name"
++            android:textColor="@color/ladrok_muted"
++            android:textSize="22sp"
++            android:fontFamily="sans-serif-light" />
++
++    <TextClock
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="end"
++            android:format12Hour="h:mm"
++            android:format24Hour="HH:mm"
++            android:textColor="@color/ladrok_silver"
++            android:textSize="22sp"
++            android:fontFamily="sans-serif-light" />
++
++    <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="100dp"
++            android:orientation="vertical">
++
++        <TextView
++                android:id="@+id/headline"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:textColor="@color/ladrok_ink"
++                android:textSize="44sp"
++                android:fontFamily="sans-serif-light" />
++
++        <TextView
++                android:id="@+id/state"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="6dp"
++                android:maxWidth="640dp"
++                android:textColor="@color/ladrok_muted"
++                android:textSize="18sp" />
++
++        <ProgressBar
++                android:id="@+id/progress"
++                style="@android:style/Widget.ProgressBar.Horizontal"
++                android:layout_width="400dp"
++                android:layout_height="3dp"
++                android:layout_marginTop="24dp"
++                android:max="100"
++                android:progressDrawable="@drawable/progress"
++                android:visibility="gone" />
++
++        <LinearLayout
++                android:id="@+id/actions"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="40dp"
++                android:orientation="horizontal">
++
++            <Button android:id="@+id/primary" style="@style/Ladrok.Pill" />
++            <Button android:id="@+id/later" style="@style/Ladrok.Pill" android:text="@string/action_later" />
++        </LinearLayout>
++    </LinearLayout>
++
++    <LinearLayout
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="bottom"
++            android:orientation="horizontal">
++
++        <TextView android:id="@+id/fact_current" style="@style/Ladrok.Fact" />
++        <TextView android:id="@+id/fact_size" style="@style/Ladrok.Fact" />
++    </LinearLayout>
++</FrameLayout>
+diff --git a/LadrokUpdater/res/values/colors.xml b/LadrokUpdater/res/values/colors.xml
+new file mode 100644
+index 0000000..e9e9051
+--- /dev/null
++++ b/LadrokUpdater/res/values/colors.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- The Ladrok palette (see CONTEXT.md in ladrok-start): black, greys, no accent colour. -->
++<resources>
++    <color name="ladrok_black">#FF000000</color>
++    <color name="ladrok_raised">#FF121212</color>
++    <color name="ladrok_line">#FF262626</color>
++    <color name="ladrok_ink">#FFE4E4E4</color>
++    <color name="ladrok_muted">#FF8A8A8A</color>
++    <color name="ladrok_silver">#FFCFCFCF</color>
++</resources>
 diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
 index 999ee18..54ac0b4 100644
 --- a/aosp_rpi5_tv.mk
