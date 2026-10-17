@@ -30568,6 +30568,23 @@ index 1da3af0..6274eb9 100644
 +# init.rc writes /dev/sys/block/by-name/{userdata,rootdisk}/queue/discard_max_bytes; on the SD
 +# card that is the mmc host's sysfs tree (labelled sysfs_devices_block in genfs_contexts).
 +allow init sysfs_devices_block:file w_file_perms;
+diff --git a/sepolicy/mediacodec.te b/sepolicy/mediacodec.te
+index da273e1..ffcf695 100644
+--- a/sepolicy/mediacodec.te
++++ b/sepolicy/mediacodec.te
+@@ -1,2 +1,12 @@
+ gpu_access(mediacodec)
+ get_prop(mediacodec, vendor_ffmpeg_config_prop)
++
++# The ffmpeg Codec2 HAL creates the bufferpool fast message queues (memfd:MessageQueue) it shares
++# with the app. Without the memfd class they are plain tmpfs files that neither it nor the app may
++# write, so every linear (audio) block fetch fails and e.g. Stremio can't decode AC3. Give them their
++# own type and let apps use it (the memfd is s0, apps run with per-app MLS categories), like
++# mediaswcodec_tmpfs in sepolicy_system_ext.
++type mediacodec_tmpfs, file_type;
++tmpfs_domain(mediacodec)
++allow { appdomain -isolated_app_all } mediacodec_tmpfs:file { getattr map read write };
++typeattribute mediacodec_tmpfs mlstrustedobject;
 diff --git a/sepolicy/property.te b/sepolicy/property.te
 index 027b4b7..ef44223 100644
 --- a/sepolicy/property.te
