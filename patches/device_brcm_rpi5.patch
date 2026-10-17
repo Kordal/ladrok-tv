@@ -1333,15 +1333,16 @@ index 0000000..d38fcb0
 +</permissions>
 diff --git a/LadrokSleep/Android.bp b/LadrokSleep/Android.bp
 new file mode 100644
-index 0000000..f4dc6c2
+index 0000000..0c2dc30
 --- /dev/null
 +++ b/LadrokSleep/Android.bp
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,29 @@
 +//
 +// SPDX-License-Identifier: Apache-2.0
 +//
 +// Sleep timer: the sleep key (KEYCODE_BUTTON_1, claimed in LadrokFrameworkOverlay's
-+// global_keys.xml) and Settings > Sleep timer set it; 60 s before the end a warning shows over
++// global_keys.xml, or a button the user picks, which GlobalKeyManager treats the same way; see
++// SleepKey.java) and Settings > Sleep timer set it; 60 s before the end a warning shows over
 +// any app, and at the end playback pauses, the TV gets CEC <Standby> and the box goes to sleep.
 +
 +prebuilt_etc {
@@ -1367,10 +1368,10 @@ index 0000000..f4dc6c2
 +}
 diff --git a/LadrokSleep/AndroidManifest.xml b/LadrokSleep/AndroidManifest.xml
 new file mode 100644
-index 0000000..35252fb
+index 0000000..5477cc5
 --- /dev/null
 +++ b/LadrokSleep/AndroidManifest.xml
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,50 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<!-- Persistent: the warning is a window owned by this process, and the process must be
@@ -1382,6 +1383,8 @@ index 0000000..35252fb
 +    <uses-permission android:name="android.permission.HDMI_CEC" />
 +    <uses-permission android:name="android.permission.SYSTEM_APPLICATION_OVERLAY" />
 +    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
++    <!-- The sleep key the user picks, in Settings.Global (see SleepKey) -->
++    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 +
 +    <uses-feature android:name="android.software.leanback" android:required="false" />
 +    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -1507,10 +1510,10 @@ index 0000000..515ac0d
 +        style="@style/Ladrok.Pill" />
 diff --git a/LadrokSleep/res/layout/sleep_activity.xml b/LadrokSleep/res/layout/sleep_activity.xml
 new file mode 100644
-index 0000000..3fe06e0
+index 0000000..01f4c8f
 --- /dev/null
 +++ b/LadrokSleep/res/layout/sleep_activity.xml
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,102 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<!-- Settings > Sleep timer, in the System update layout: title top left, clock top right, the
@@ -1575,6 +1578,42 @@ index 0000000..3fe06e0
 +                android:layout_marginTop="40dp"
 +                android:clipChildren="false"
 +                android:orientation="horizontal" />
++
++        <!-- The sleep key: the chosen button (OK to pick another) and Reset -->
++        <TextView
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="48dp"
++                android:text="@string/key_title"
++                android:textColor="@color/ladrok_ink"
++                android:textSize="22sp"
++                android:fontFamily="sans-serif-light" />
++
++        <LinearLayout
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="14dp"
++                android:clipChildren="false"
++                android:orientation="horizontal">
++
++            <Button
++                    android:id="@+id/key"
++                    style="@style/Ladrok.Pill" />
++
++            <Button
++                    android:id="@+id/reset"
++                    style="@style/Ladrok.Pill"
++                    android:text="@string/key_reset" />
++        </LinearLayout>
++
++        <TextView
++                android:id="@+id/key_hint"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="12dp"
++                android:maxWidth="640dp"
++                android:textColor="@color/ladrok_muted"
++                android:textSize="18sp" />
 +    </LinearLayout>
 +</FrameLayout>
 diff --git a/LadrokSleep/res/layout/warning.xml b/LadrokSleep/res/layout/warning.xml
@@ -1632,10 +1671,10 @@ index 0000000..e9e9051
 +</resources>
 diff --git a/LadrokSleep/res/values/strings.xml b/LadrokSleep/res/values/strings.xml
 new file mode 100644
-index 0000000..74593b2
+index 0000000..a7c559b
 --- /dev/null
 +++ b/LadrokSleep/res/values/strings.xml
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,36 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
@@ -1650,10 +1689,27 @@ index 0000000..74593b2
 +    <string name="state_off">Off</string>
 +    <string name="state_minutes">Sleep in %1$d min</string>
 +    <string name="state_seconds">Sleep in %1$d s</string>
-+    <string name="description">When the timer ends, playback pauses, the TV turns off and Ladrok TV goes to sleep. The sleep key on Ladrok Remote sets it too.</string>
++    <string name="description">When the timer ends, playback pauses, the TV turns off and Ladrok TV goes to sleep. The sleep key sets it too.</string>
 +
 +    <string name="option_off">Off</string>
 +    <string name="option_minutes">%1$d min</string>
++
++    <string name="key_title">Sleep key</string>
++    <string name="key_none">None</string>
++    <string name="key_reset">Reset</string>
++    <string name="key_press">Press the button you want to use</string>
++    <string name="key_press_hint">Back cancels.</string>
++    <string name="key_hint">Pick a button on your remote that sets the timer from any app. The moon key on Ladrok Remote always works.</string>
++    <string name="key_set">%1$s is now the sleep key.</string>
++    <string name="key_cleared">No sleep key. The moon key on Ladrok Remote still works.</string>
++    <string name="key_unchanged">Sleep key not changed.</string>
++    <string name="key_already">That button already is a sleep key.</string>
++    <string name="key_reserved">%1$s is needed by the system. Press another button.</string>
++    <string name="key_unknown">Ladrok TV doesn\'t recognise that button. Press another one.</string>
++    <string name="key_red">Red button</string>
++    <string name="key_green">Green button</string>
++    <string name="key_yellow">Yellow button</string>
++    <string name="key_blue">Blue button</string>
 +</resources>
 diff --git a/LadrokSleep/res/values/styles.xml b/LadrokSleep/res/values/styles.xml
 new file mode 100644
@@ -1807,10 +1863,10 @@ index 0000000..54084fc
 +}
 diff --git a/LadrokSleep/src/tv/ladrok/sleep/KeyReceiver.java b/LadrokSleep/src/tv/ladrok/sleep/KeyReceiver.java
 new file mode 100644
-index 0000000..a141ed4
+index 0000000..bae479e
 --- /dev/null
 +++ b/LadrokSleep/src/tv/ladrok/sleep/KeyReceiver.java
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,31 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -1823,8 +1879,9 @@ index 0000000..a141ed4
 +import android.view.KeyEvent;
 +
 +/**
-+ * The sleep key (KEYCODE_BUTTON_1; HID Consumer 0x36 from Ladrok Remote): GlobalKeyManager
-+ * sends it here instead of to the focused app. Each press moves to the next duration.
++ * The sleep key (KEYCODE_BUTTON_1, HID Consumer 0x36 from Ladrok Remote, or the button picked
++ * in Settings > Sleep timer, see {@link SleepKey}): GlobalKeyManager sends it here instead of to
++ * the focused app. Each press moves to the next duration.
 + */
 +public class KeyReceiver extends BroadcastReceiver {
 +    @Override
@@ -1834,6 +1891,8 @@ index 0000000..a141ed4
 +                || event.getRepeatCount() != 0) {
 +            return;
 +        }
++        // Pressed while Settings > Sleep timer waits for a new sleep key: it already is one
++        if (SleepActivity.onGlobalSleepKey()) return;
 +        int minutes = SleepTimer.cycle(context);
 +        Notice.show(context, minutes == 0 ? context.getString(R.string.notice_off)
 +                : context.getString(R.string.notice_on, minutes));
@@ -1912,10 +1971,10 @@ index 0000000..d0e59b8
 +}
 diff --git a/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java b/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java
 new file mode 100644
-index 0000000..1653798
+index 0000000..36864ae
 --- /dev/null
 +++ b/LadrokSleep/src/tv/ladrok/sleep/SleepActivity.java
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,212 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -1926,15 +1985,26 @@ index 0000000..1653798
 +import android.os.Bundle;
 +import android.os.Handler;
 +import android.os.Looper;
++import android.view.KeyEvent;
 +import android.view.LayoutInflater;
 +import android.view.View;
 +import android.widget.Button;
 +import android.widget.LinearLayout;
 +import android.widget.TextView;
 +
-+/** Settings > Sleep timer: the time left, and Off / 30 / 60 / 90 / 120 min. */
++/**
++ * Settings > Sleep timer: the time left, Off / 30 / 60 / 90 / 120 min, and the sleep key: OK on
++ * it waits for the next button press, which becomes the sleep key (see {@link SleepKey}).
++ */
 +public class SleepActivity extends Activity {
 +    private static final float FOCUS_SCALE = 1.05f;
++    /** Waiting for a button press ends by itself after this. */
++    private static final long LEARN_MS = 15_000;
++    /** A confirmation stays this long before the hint comes back. */
++    private static final long MESSAGE_MS = 4000;
++
++    /** The screen while it waits for a button press, for {@link KeyReceiver}; main thread. */
++    private static SleepActivity sLearning;
 +
 +    private final Handler mHandler = new Handler(Looper.getMainLooper());
 +    private final Runnable mRefresh = new Runnable() {
@@ -1944,9 +2014,17 @@ index 0000000..1653798
 +            mHandler.postDelayed(this, 1000);
 +        }
 +    };
++    private final Runnable mLearnTimeout = () -> stopLearning(null);
++    private final Runnable mShowHint = this::showHint;
 +
 +    private TextView mHeadline;
 +    private final Button[] mOptions = new Button[SleepTimer.STEPS.length];
++    private Button mKey;
++    private Button mReset;
++    private TextView mKeyHint;
++    private boolean mLearning;
++    /** The key whose press was just taken while learning: its release is not passed on. */
++    private int mSwallowUp = KeyEvent.KEYCODE_UNKNOWN;
 +
 +    @Override
 +    protected void onCreate(Bundle savedInstanceState) {
@@ -1972,6 +2050,22 @@ index 0000000..1653798
 +            options.addView(b);
 +            mOptions[i] = b;
 +        }
++
++        mKey = findViewById(R.id.key);
++        mReset = findViewById(R.id.reset);
++        mKeyHint = findViewById(R.id.key_hint);
++        mKey.setOnFocusChangeListener(grow);
++        mReset.setOnFocusChangeListener(grow);
++        mKey.setOnClickListener(v -> startLearning());
++        mReset.setOnClickListener(v -> {
++            SleepKey.set(this, KeyEvent.KEYCODE_UNKNOWN);
++            mKey.requestFocus();
++            showKey();
++            showMessage(getString(R.string.key_cleared));
++        });
++        showKey();
++        showHint();
++
 +        mOptions[SleepTimer.step(this)].requestFocus();
 +    }
 +
@@ -1985,6 +2079,97 @@ index 0000000..1653798
 +    protected void onPause() {
 +        super.onPause();
 +        mHandler.removeCallbacks(mRefresh);
++        if (mLearning) stopLearning(null);
++    }
++
++    @Override
++    public boolean dispatchKeyEvent(KeyEvent event) {
++        if (!mLearning) {
++            if (event.getAction() == KeyEvent.ACTION_UP && event.getKeyCode() == mSwallowUp) {
++                mSwallowUp = KeyEvent.KEYCODE_UNKNOWN;
++                return true;
++            }
++            return super.dispatchKeyEvent(event);
++        }
++        // Waiting for the new sleep key: every button is taken here, none moves the focus
++        if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
++            learn(event.getKeyCode());
++        }
++        return true;
++    }
++
++    /**
++     * A sleep key press (Ladrok Remote's moon key or the current sleep key), which
++     * GlobalKeyManager sends to KeyReceiver and never here; true when this screen was waiting
++     * for a button and took it.
++     */
++    static boolean onGlobalSleepKey() {
++        if (sLearning == null) return false;
++        sLearning.stopLearning(sLearning.getString(R.string.key_already));
++        return true;
++    }
++
++    private void startLearning() {
++        mLearning = true;
++        sLearning = this;
++        mKey.setText(R.string.key_press);
++        mReset.setVisibility(View.GONE);
++        mHandler.removeCallbacks(mShowHint);
++        mKeyHint.setText(R.string.key_press_hint);
++        mHandler.postDelayed(mLearnTimeout, LEARN_MS);
++    }
++
++    /** Back to the sleep key row as it is now, with a message (or the hint, for null). */
++    private void stopLearning(String message) {
++        mLearning = false;
++        if (sLearning == this) sLearning = null;
++        mHandler.removeCallbacks(mLearnTimeout);
++        showKey();
++        mKey.requestFocus();
++        if (message == null) {
++            showHint();
++        } else {
++            showMessage(message);
++        }
++    }
++
++    private void learn(int keyCode) {
++        if (keyCode == KeyEvent.KEYCODE_BACK) {
++            mSwallowUp = keyCode;
++            stopLearning(getString(R.string.key_unchanged));
++        } else if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
++            refuse(getString(R.string.key_unknown));
++        } else if (SleepKey.isReserved(keyCode)) {
++            refuse(getString(R.string.key_reserved, SleepKey.name(this, keyCode)));
++        } else {
++            mSwallowUp = keyCode;
++            SleepKey.set(this, keyCode);
++            stopLearning(getString(R.string.key_set, SleepKey.name(this, keyCode)));
++        }
++    }
++
++    /** A button that can't be the sleep key: say so and keep waiting, from the start. */
++    private void refuse(String message) {
++        mKeyHint.setText(message);
++        mHandler.removeCallbacks(mLearnTimeout);
++        mHandler.postDelayed(mLearnTimeout, LEARN_MS);
++    }
++
++    private void showKey() {
++        int keyCode = SleepKey.get(this);
++        boolean set = keyCode != KeyEvent.KEYCODE_UNKNOWN;
++        mKey.setText(set ? SleepKey.name(this, keyCode) : getString(R.string.key_none));
++        mReset.setVisibility(set ? View.VISIBLE : View.GONE);
++    }
++
++    private void showMessage(String message) {
++        mKeyHint.setText(message);
++        mHandler.removeCallbacks(mShowHint);
++        mHandler.postDelayed(mShowHint, MESSAGE_MS);
++    }
++
++    private void showHint() {
++        mKeyHint.setText(R.string.key_hint);
 +    }
 +
 +    private void refresh() {
@@ -2000,6 +2185,93 @@ index 0000000..1653798
 +        for (int i = 0; i < mOptions.length; i++) {
 +            mOptions[i].setActivated(i == step);
 +        }
++    }
++}
+diff --git a/LadrokSleep/src/tv/ladrok/sleep/SleepKey.java b/LadrokSleep/src/tv/ladrok/sleep/SleepKey.java
+new file mode 100644
+index 0000000..1345644
+--- /dev/null
++++ b/LadrokSleep/src/tv/ladrok/sleep/SleepKey.java
+@@ -0,0 +1,81 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.sleep;
++
++import android.content.Context;
++import android.provider.Settings;
++import android.view.KeyEvent;
++
++import java.util.Locale;
++
++/**
++ * The sleep key the user picked in Settings > Sleep timer, for remotes without Ladrok Remote's
++ * moon key (KEYCODE_BUTTON_1, which always works). It is stored in Settings.Global, where the
++ * framework's GlobalKeyManager (frameworks_base.patch) reads it and treats that key like
++ * BUTTON_1: sent to {@link KeyReceiver}, never to the focused app. Settings keeps it across
++ * restarts.
++ */
++final class SleepKey {
++    /** Also in GlobalKeyManager. */
++    private static final String SETTING = "ladrok_sleep_key";
++
++    private SleepKey() {}
++
++    /** The chosen key code, or KEYCODE_UNKNOWN for none. */
++    static int get(Context c) {
++        return Settings.Global.getInt(c.getContentResolver(), SETTING, KeyEvent.KEYCODE_UNKNOWN);
++    }
++
++    /** Sets the sleep key; KEYCODE_UNKNOWN for none. */
++    static void set(Context c, int keyCode) {
++        Settings.Global.putInt(c.getContentResolver(), SETTING, keyCode);
++    }
++
++    /**
++     * Keys the system needs, refused as the sleep key (GlobalKeyManager ignores them too).
++     * HOME and POWER never reach an app, so they are only here for completeness.
++     */
++    static boolean isReserved(int keyCode) {
++        switch (keyCode) {
++            case KeyEvent.KEYCODE_POWER:
++            case KeyEvent.KEYCODE_SLEEP:
++            case KeyEvent.KEYCODE_WAKEUP:
++            case KeyEvent.KEYCODE_HOME:
++            case KeyEvent.KEYCODE_BACK:
++            case KeyEvent.KEYCODE_DPAD_UP:
++            case KeyEvent.KEYCODE_DPAD_DOWN:
++            case KeyEvent.KEYCODE_DPAD_LEFT:
++            case KeyEvent.KEYCODE_DPAD_RIGHT:
++            case KeyEvent.KEYCODE_DPAD_CENTER:
++            case KeyEvent.KEYCODE_DPAD_UP_LEFT:
++            case KeyEvent.KEYCODE_DPAD_UP_RIGHT:
++            case KeyEvent.KEYCODE_DPAD_DOWN_LEFT:
++            case KeyEvent.KEYCODE_DPAD_DOWN_RIGHT:
++            case KeyEvent.KEYCODE_ENTER:
++            case KeyEvent.KEYCODE_NUMPAD_ENTER:
++            case KeyEvent.KEYCODE_VOLUME_UP:
++            case KeyEvent.KEYCODE_VOLUME_DOWN:
++            case KeyEvent.KEYCODE_VOLUME_MUTE:
++            case KeyEvent.KEYCODE_MUTE:
++                return true;
++            default:
++                return false;
++        }
++    }
++
++    /** "Red button", "Media rewind", "F5": readable enough for a remote's button. */
++    static String name(Context c, int keyCode) {
++        switch (keyCode) {
++            case KeyEvent.KEYCODE_PROG_RED: return c.getString(R.string.key_red);
++            case KeyEvent.KEYCODE_PROG_GREEN: return c.getString(R.string.key_green);
++            case KeyEvent.KEYCODE_PROG_YELLOW: return c.getString(R.string.key_yellow);
++            case KeyEvent.KEYCODE_PROG_BLUE: return c.getString(R.string.key_blue);
++        }
++        String s = KeyEvent.keyCodeToString(keyCode);
++        if (s.startsWith("KEYCODE_")) s = s.substring("KEYCODE_".length());
++        s = s.replace('_', ' ').toLowerCase(Locale.ROOT);
++        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
 +    }
 +}
 diff --git a/LadrokSleep/src/tv/ladrok/sleep/SleepTimer.java b/LadrokSleep/src/tv/ladrok/sleep/SleepTimer.java
@@ -2250,17 +2522,19 @@ index 0000000..c58d853
 +}
 diff --git a/LadrokSleep/tv.ladrok.sleep.xml b/LadrokSleep/tv.ladrok.sleep.xml
 new file mode 100644
-index 0000000..9c78105
+index 0000000..76e9146
 --- /dev/null
 +++ b/LadrokSleep/tv.ladrok.sleep.xml
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,11 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<!-- HDMI_CEC: <Standby> to the TV at the end. DEVICE_POWER (goToSleep) and
-+     SYSTEM_APPLICATION_OVERLAY (the warning) are signature-only, from the platform certificate. -->
++<!-- HDMI_CEC: <Standby> to the TV at the end. WRITE_SECURE_SETTINGS: the sleep key the user
++     picks. DEVICE_POWER (goToSleep) and SYSTEM_APPLICATION_OVERLAY (the warning) are
++     signature-only, from the platform certificate. -->
 +<permissions>
 +    <privapp-permissions package="tv.ladrok.sleep">
 +        <permission name="android.permission.HDMI_CEC"/>
++        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
 +    </privapp-permissions>
 +</permissions>
 diff --git a/LadrokStore/.gitignore b/LadrokStore/.gitignore
