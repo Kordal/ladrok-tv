@@ -619,6 +619,25 @@ index 0000000..8d20a96
 +        </activity>
 +    </application>
 +</manifest>
+diff --git a/LadrokSetup/res/drawable/row_selector.xml b/LadrokSetup/res/drawable/row_selector.xml
+new file mode 100644
+index 0000000..bdb6c61
+--- /dev/null
++++ b/LadrokSetup/res/drawable/row_selector.xml
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Leanback draws this as each row's android:foreground, over the text: only the focused row
++     gets a 15% white veil, which reads as #262626 on black and leaves the text legible. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true">
++        <shape android:shape="rectangle">
++            <corners android:radius="8dp" />
++            <solid android:color="#26FFFFFF" />
++        </shape>
++    </item>
++    <item android:drawable="@android:color/transparent" />
++</selector>
 diff --git a/LadrokSetup/res/values/strings.xml b/LadrokSetup/res/values/strings.xml
 new file mode 100644
 index 0000000..1b46344
@@ -1312,19 +1331,6 @@ index 0000000..d38fcb0
 +        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
 +    </privapp-permissions>
 +</permissions>
-diff --git a/LadrokSetup/res/drawable/row_selector.xml b/LadrokSetup/res/drawable/row_selector.xml
-new file mode 100644
-index 0000000..8f4dcfa
---- /dev/null
-+++ b/LadrokSetup/res/drawable/row_selector.xml
-@@ -0,0 +1,7 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<!-- Focused row: Line (#262626) fill with rounded corners, as in Ladrok Store. -->
-+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-+    <corners android:radius="8dp" />
-+    <solid android:color="#FF262626" />
-+</shape>
 diff --git a/LadrokStore/.gitignore b/LadrokStore/.gitignore
 new file mode 100644
 index 0000000..c84e6e2
@@ -1481,6 +1487,18 @@ index 0000000..9ce1cae
 +        </receiver>
 +    </application>
 +</manifest>
+diff --git a/LadrokUpdater/res/color/pill_text.xml b/LadrokUpdater/res/color/pill_text.xml
+new file mode 100644
+index 0000000..4639d58
+--- /dev/null
++++ b/LadrokUpdater/res/color/pill_text.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true" android:color="@color/ladrok_black" />
++    <item android:color="@color/ladrok_ink" />
++</selector>
 diff --git a/LadrokUpdater/res/drawable-nodpi/banner.png b/LadrokUpdater/res/drawable-nodpi/banner.png
 new file mode 100644
 index 0000000000000000000000000000000000000000..cbf4bf7533142c8893ffb8364d4a8632edf8d847
@@ -2006,6 +2024,160 @@ index 0000000..42d062a
 +            android:fillColor="#FFFFFFFF"
 +            android:pathData="M11,9h2v4h2l-3,3 -3,-3h2z" />
 +</vector>
+diff --git a/LadrokUpdater/res/drawable/pill.xml b/LadrokUpdater/res/drawable/pill.xml
+new file mode 100644
+index 0000000..a096a5a
+--- /dev/null
++++ b/LadrokUpdater/res/drawable/pill.xml
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Ladrok pill: outlined at rest, inverted (Ink fill) when focused. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true">
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <solid android:color="@color/ladrok_ink" />
++        </shape>
++    </item>
++    <item>
++        <shape android:shape="rectangle">
++            <corners android:radius="24dp" />
++            <stroke android:width="1dp" android:color="@color/ladrok_line" />
++        </shape>
++    </item>
++</selector>
+diff --git a/LadrokUpdater/res/drawable/progress.xml b/LadrokUpdater/res/drawable/progress.xml
+new file mode 100644
+index 0000000..c0b3801
+--- /dev/null
++++ b/LadrokUpdater/res/drawable/progress.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Thin Silver line on a Line track. -->
++<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:id="@android:id/background">
++        <shape><corners android:radius="2dp" /><solid android:color="@color/ladrok_line" /></shape>
++    </item>
++    <item android:id="@android:id/progress">
++        <clip><shape><corners android:radius="2dp" /><solid android:color="@color/ladrok_silver" /></shape></clip>
++    </item>
++</layer-list>
+diff --git a/LadrokUpdater/res/layout/update_activity.xml b/LadrokUpdater/res/layout/update_activity.xml
+new file mode 100644
+index 0000000..9a9b848
+--- /dev/null
++++ b/LadrokUpdater/res/layout/update_activity.xml
+@@ -0,0 +1,91 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- System update, in the Launcher's layout: title top left, clock top right, the version as
++     the headline, one line of state, pills, and the facts at the bottom. Sizes are for a
++     960x540 dp (1080p) screen with 48dp overscan margins. -->
++<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:background="@color/ladrok_black"
++        android:clipChildren="false"
++        android:clipToPadding="false"
++        android:paddingStart="48dp"
++        android:paddingEnd="48dp"
++        android:paddingTop="26dp"
++        android:paddingBottom="32dp">
++
++    <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="@string/app_name"
++            android:textColor="@color/ladrok_muted"
++            android:textSize="22sp"
++            android:fontFamily="sans-serif-light" />
++
++    <TextClock
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="end"
++            android:format12Hour="h:mm"
++            android:format24Hour="HH:mm"
++            android:textColor="@color/ladrok_silver"
++            android:textSize="22sp"
++            android:fontFamily="sans-serif-light" />
++
++    <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="100dp"
++            android:clipChildren="false"
++            android:orientation="vertical">
++
++        <TextView
++                android:id="@+id/headline"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:textColor="@color/ladrok_ink"
++                android:textSize="44sp"
++                android:fontFamily="sans-serif-light" />
++
++        <TextView
++                android:id="@+id/state"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="6dp"
++                android:maxWidth="640dp"
++                android:textColor="@color/ladrok_muted"
++                android:textSize="18sp" />
++
++        <ProgressBar
++                android:id="@+id/progress"
++                style="@android:style/Widget.ProgressBar.Horizontal"
++                android:layout_width="400dp"
++                android:layout_height="3dp"
++                android:layout_marginTop="24dp"
++                android:max="100"
++                android:progressDrawable="@drawable/progress"
++                android:visibility="gone" />
++
++        <LinearLayout
++                android:id="@+id/actions"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:layout_marginTop="40dp"
++                android:clipChildren="false"
++                android:orientation="horizontal">
++
++            <Button android:id="@+id/primary" style="@style/Ladrok.Pill" />
++            <Button android:id="@+id/later" style="@style/Ladrok.Pill" android:text="@string/action_later" />
++        </LinearLayout>
++    </LinearLayout>
++
++    <LinearLayout
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="bottom"
++            android:orientation="horizontal">
++
++        <TextView android:id="@+id/fact_current" style="@style/Ladrok.Fact" />
++        <TextView android:id="@+id/fact_size" style="@style/Ladrok.Fact" />
++    </LinearLayout>
++</FrameLayout>
+diff --git a/LadrokUpdater/res/values/colors.xml b/LadrokUpdater/res/values/colors.xml
+new file mode 100644
+index 0000000..e9e9051
+--- /dev/null
++++ b/LadrokUpdater/res/values/colors.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- The Ladrok palette (see CONTEXT.md in ladrok-start): black, greys, no accent colour. -->
++<resources>
++    <color name="ladrok_black">#FF000000</color>
++    <color name="ladrok_raised">#FF121212</color>
++    <color name="ladrok_line">#FF262626</color>
++    <color name="ladrok_ink">#FFE4E4E4</color>
++    <color name="ladrok_muted">#FF8A8A8A</color>
++    <color name="ladrok_silver">#FFCFCFCF</color>
++</resources>
 diff --git a/LadrokUpdater/res/values/config.xml b/LadrokUpdater/res/values/config.xml
 new file mode 100644
 index 0000000..7545e69
@@ -2072,7 +2244,7 @@ index 0000000..3131eea
 +</resources>
 diff --git a/LadrokUpdater/res/values/styles.xml b/LadrokUpdater/res/values/styles.xml
 new file mode 100644
-index 0000000..b6fcef2
+index 0000000..32eb375
 --- /dev/null
 +++ b/LadrokUpdater/res/values/styles.xml
 @@ -0,0 +1,32 @@
@@ -2086,7 +2258,7 @@ index 0000000..b6fcef2
 +        <item name="android:windowAnimationStyle">@null</item>
 +    </style>
 +
-+    <style name="Ladrok.Pill">
++    <style name="Ladrok.Pill" parent="">
 +        <item name="android:layout_width">wrap_content</item>
 +        <item name="android:layout_height">48dp</item>
 +        <item name="android:layout_marginEnd">12dp</item>
@@ -2100,7 +2272,7 @@ index 0000000..b6fcef2
 +        <item name="android:focusable">true</item>
 +    </style>
 +
-+    <style name="Ladrok.Fact">
++    <style name="Ladrok.Fact" parent="">
 +        <item name="android:layout_width">wrap_content</item>
 +        <item name="android:layout_height">wrap_content</item>
 +        <item name="android:layout_marginEnd">48dp</item>
@@ -2969,170 +3141,8 @@ index 0000000..c4b1b91
 +        <permission name="android.permission.START_FOREGROUND_SERVICES_FROM_BACKGROUND"/>
 +    </privapp-permissions>
 +</permissions>
-diff --git a/LadrokUpdater/res/color/pill_text.xml b/LadrokUpdater/res/color/pill_text.xml
-new file mode 100644
-index 0000000..4639d58
---- /dev/null
-+++ b/LadrokUpdater/res/color/pill_text.xml
-@@ -0,0 +1,6 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<selector xmlns:android="http://schemas.android.com/apk/res/android">
-+    <item android:state_focused="true" android:color="@color/ladrok_black" />
-+    <item android:color="@color/ladrok_ink" />
-+</selector>
-diff --git a/LadrokUpdater/res/drawable/pill.xml b/LadrokUpdater/res/drawable/pill.xml
-new file mode 100644
-index 0000000..a096a5a
---- /dev/null
-+++ b/LadrokUpdater/res/drawable/pill.xml
-@@ -0,0 +1,17 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<!-- Ladrok pill: outlined at rest, inverted (Ink fill) when focused. -->
-+<selector xmlns:android="http://schemas.android.com/apk/res/android">
-+    <item android:state_focused="true">
-+        <shape android:shape="rectangle">
-+            <corners android:radius="24dp" />
-+            <solid android:color="@color/ladrok_ink" />
-+        </shape>
-+    </item>
-+    <item>
-+        <shape android:shape="rectangle">
-+            <corners android:radius="24dp" />
-+            <stroke android:width="1dp" android:color="@color/ladrok_line" />
-+        </shape>
-+    </item>
-+</selector>
-diff --git a/LadrokUpdater/res/drawable/progress.xml b/LadrokUpdater/res/drawable/progress.xml
-new file mode 100644
-index 0000000..c0b3801
---- /dev/null
-+++ b/LadrokUpdater/res/drawable/progress.xml
-@@ -0,0 +1,11 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<!-- Thin Silver line on a Line track. -->
-+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-+    <item android:id="@android:id/background">
-+        <shape><corners android:radius="2dp" /><solid android:color="@color/ladrok_line" /></shape>
-+    </item>
-+    <item android:id="@android:id/progress">
-+        <clip><shape><corners android:radius="2dp" /><solid android:color="@color/ladrok_silver" /></shape></clip>
-+    </item>
-+</layer-list>
-diff --git a/LadrokUpdater/res/layout/update_activity.xml b/LadrokUpdater/res/layout/update_activity.xml
-new file mode 100644
-index 0000000..f6990da
---- /dev/null
-+++ b/LadrokUpdater/res/layout/update_activity.xml
-@@ -0,0 +1,87 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<!-- System update, in the Launcher's layout: title top left, clock top right, the version as
-+     the headline, one line of state, pills, and the facts at the bottom. Sizes are for a
-+     960x540 dp (1080p) screen with 48dp overscan margins. -->
-+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-+        android:layout_width="match_parent"
-+        android:layout_height="match_parent"
-+        android:background="@color/ladrok_black"
-+        android:paddingStart="48dp"
-+        android:paddingEnd="48dp"
-+        android:paddingTop="26dp"
-+        android:paddingBottom="32dp">
-+
-+    <TextView
-+            android:layout_width="wrap_content"
-+            android:layout_height="wrap_content"
-+            android:text="@string/app_name"
-+            android:textColor="@color/ladrok_muted"
-+            android:textSize="22sp"
-+            android:fontFamily="sans-serif-light" />
-+
-+    <TextClock
-+            android:layout_width="wrap_content"
-+            android:layout_height="wrap_content"
-+            android:layout_gravity="end"
-+            android:format12Hour="h:mm"
-+            android:format24Hour="HH:mm"
-+            android:textColor="@color/ladrok_silver"
-+            android:textSize="22sp"
-+            android:fontFamily="sans-serif-light" />
-+
-+    <LinearLayout
-+            android:layout_width="match_parent"
-+            android:layout_height="wrap_content"
-+            android:layout_marginTop="100dp"
-+            android:orientation="vertical">
-+
-+        <TextView
-+                android:id="@+id/headline"
-+                android:layout_width="wrap_content"
-+                android:layout_height="wrap_content"
-+                android:textColor="@color/ladrok_ink"
-+                android:textSize="44sp"
-+                android:fontFamily="sans-serif-light" />
-+
-+        <TextView
-+                android:id="@+id/state"
-+                android:layout_width="wrap_content"
-+                android:layout_height="wrap_content"
-+                android:layout_marginTop="6dp"
-+                android:maxWidth="640dp"
-+                android:textColor="@color/ladrok_muted"
-+                android:textSize="18sp" />
-+
-+        <ProgressBar
-+                android:id="@+id/progress"
-+                style="@android:style/Widget.ProgressBar.Horizontal"
-+                android:layout_width="400dp"
-+                android:layout_height="3dp"
-+                android:layout_marginTop="24dp"
-+                android:max="100"
-+                android:progressDrawable="@drawable/progress"
-+                android:visibility="gone" />
-+
-+        <LinearLayout
-+                android:id="@+id/actions"
-+                android:layout_width="wrap_content"
-+                android:layout_height="wrap_content"
-+                android:layout_marginTop="40dp"
-+                android:orientation="horizontal">
-+
-+            <Button android:id="@+id/primary" style="@style/Ladrok.Pill" />
-+            <Button android:id="@+id/later" style="@style/Ladrok.Pill" android:text="@string/action_later" />
-+        </LinearLayout>
-+    </LinearLayout>
-+
-+    <LinearLayout
-+            android:layout_width="wrap_content"
-+            android:layout_height="wrap_content"
-+            android:layout_gravity="bottom"
-+            android:orientation="horizontal">
-+
-+        <TextView android:id="@+id/fact_current" style="@style/Ladrok.Fact" />
-+        <TextView android:id="@+id/fact_size" style="@style/Ladrok.Fact" />
-+    </LinearLayout>
-+</FrameLayout>
-diff --git a/LadrokUpdater/res/values/colors.xml b/LadrokUpdater/res/values/colors.xml
-new file mode 100644
-index 0000000..e9e9051
---- /dev/null
-+++ b/LadrokUpdater/res/values/colors.xml
-@@ -0,0 +1,11 @@
-+<?xml version="1.0" encoding="utf-8"?>
-+<!-- SPDX-License-Identifier: Apache-2.0 -->
-+<!-- The Ladrok palette (see CONTEXT.md in ladrok-start): black, greys, no accent colour. -->
-+<resources>
-+    <color name="ladrok_black">#FF000000</color>
-+    <color name="ladrok_raised">#FF121212</color>
-+    <color name="ladrok_line">#FF262626</color>
-+    <color name="ladrok_ink">#FFE4E4E4</color>
-+    <color name="ladrok_muted">#FF8A8A8A</color>
-+    <color name="ladrok_silver">#FFCFCFCF</color>
-+</resources>
 diff --git a/aosp_rpi5_tv.mk b/aosp_rpi5_tv.mk
-index 999ee18..54ac0b4 100644
+index 999ee18..948774b 100644
 --- a/aosp_rpi5_tv.mk
 +++ b/aosp_rpi5_tv.mk
 @@ -19,17 +19,35 @@ $(call enforce-product-packages-exist,com.android.ranging vendor_tracing_descrip
@@ -3175,7 +3185,23 @@ index 999ee18..54ac0b4 100644
  
  # Keylayout
  PRODUCT_PACKAGES += \
-@@ -48,5 +66,5 @@ PRODUCT_PACKAGES += \
+@@ -44,9 +62,21 @@ PRODUCT_PACKAGES += \
+     SettingsProviderTvRpiOverlay \
+     WifiRpiOverlay
+ 
++# Ladrok screensaver (clock); LadrokFrameworkOverlay makes it the default dream
++PRODUCT_PACKAGES += \
++    LadrokDream
++
++# Ladrok black/grey theme for the stock system apps (overlay/Ladrok*Overlay)
++PRODUCT_PACKAGES += \
++    LadrokFrameworkOverlay \
++    LadrokKeyboardOverlay \
++    LadrokPackageInstallerOverlay \
++    LadrokSystemUIOverlay \
++    LadrokTvSettingsOverlay
++
+ # Device identifier. This must come after all inclusions.
  PRODUCT_DEVICE := rpi5
  PRODUCT_NAME := aosp_rpi5_tv
  PRODUCT_BRAND := Raspberry
@@ -27335,6 +27361,1336 @@ index 78ea22f..c7ee821 100644
 +$(INSTALLED_RPIBOOTIMAGE_TARGET): $(INSTALLED_BOOTIMAGE_TARGET)
 +	cp $< $@
 +INSTALLED_RADIOIMAGE_TARGET += $(INSTALLED_RPIBOOTIMAGE_TARGET)
+diff --git a/overlay/LadrokFrameworkOverlay/Android.bp b/overlay/LadrokFrameworkOverlay/Android.bp
+new file mode 100644
+index 0000000..5226f3e
+--- /dev/null
++++ b/overlay/LadrokFrameworkOverlay/Android.bp
+@@ -0,0 +1,8 @@
++// Ladrok TV black/grey theme for android.
++runtime_resource_overlay {
++    name: "LadrokFrameworkOverlay",
++    resource_dirs: ["res"],
++    certificate: "platform",
++    product_specific: true,
++    sdk_version: "current",
++}
+diff --git a/overlay/LadrokFrameworkOverlay/AndroidManifest.xml b/overlay/LadrokFrameworkOverlay/AndroidManifest.xml
+new file mode 100644
+index 0000000..53bfe9c
+--- /dev/null
++++ b/overlay/LadrokFrameworkOverlay/AndroidManifest.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="tv.ladrok.overlay.framework">
++    <application android:hasCode="false" />
++    <overlay
++        android:targetPackage="android"
++        android:isStatic="true"
++        android:priority="1" />
++</manifest>
+diff --git a/overlay/LadrokFrameworkOverlay/res/values/config.xml b/overlay/LadrokFrameworkOverlay/res/values/config.xml
+new file mode 100644
+index 0000000..cf51203
+--- /dev/null
++++ b/overlay/LadrokFrameworkOverlay/res/values/config.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <string name="config_dreamsDefaultComponent" translatable="false">tv.ladrok.dream/tv.ladrok.dream.ClockDream</string>
++</resources>
+diff --git a/overlay/LadrokKeyboardOverlay/Android.bp b/overlay/LadrokKeyboardOverlay/Android.bp
+new file mode 100644
+index 0000000..ea690c2
+--- /dev/null
++++ b/overlay/LadrokKeyboardOverlay/Android.bp
+@@ -0,0 +1,8 @@
++// Ladrok TV black/grey theme for com.android.inputmethod.leanback.
++runtime_resource_overlay {
++    name: "LadrokKeyboardOverlay",
++    resource_dirs: ["res"],
++    certificate: "platform",
++    product_specific: true,
++    sdk_version: "current",
++}
+diff --git a/overlay/LadrokKeyboardOverlay/AndroidManifest.xml b/overlay/LadrokKeyboardOverlay/AndroidManifest.xml
+new file mode 100644
+index 0000000..ec5665a
+--- /dev/null
++++ b/overlay/LadrokKeyboardOverlay/AndroidManifest.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="tv.ladrok.overlay.keyboard">
++    <application android:hasCode="false" />
++    <overlay
++        android:targetPackage="com.android.inputmethod.leanback"
++        android:isStatic="true"
++        android:priority="1" />
++</manifest>
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-hdpi/key_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-hdpi/key_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c920d9ce57eec139370a34d1fe4c9c5f68aea73
+GIT binary patch
+literal 2495
+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
+JPDHLkV1kgO%Uu8f
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-hdpi/touch_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-hdpi/touch_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..3c920d9ce57eec139370a34d1fe4c9c5f68aea73
+GIT binary patch
+literal 2495
+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
+JPDHLkV1kgO%Uu8f
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-mdpi/key_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-mdpi/key_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..e8b346709131732f82353528e32c27de7dfd9a46
+GIT binary patch
+literal 1419
+zcmV;61$6p}P)<h;3K|Lk000e1NJLTq001EX001Ef1^@s6SLDKP000G2Nkl<Zc%03b
+z&u<e)6vw}_v%6z^Z6KRiQPLhzphB{xq(&(sCmN}t7Z6HYapw@EURoMadaI(|+Dhq<
+zOC|CjSZxu4OG%{^aR{OjA&6LlLWGny5pr-K-myKiJ3BpO?WAr(QGTd=ue<YopLz3k
+z=RIKi(%Us4FLc-10H6sW8UXIzz1vGEeOD><b{K|-wAQbirb&Vz(1egb4a2xkDg8|;
+z^-Fhm_f+IT01!e*xLKG@A+*+%5Tc^sgN9*z7>40MTU#4^--qXUkWy9%AyR8?+qRuZ
+zCX=u%3rkB&Fbrcn48tF~ySpzn`!$C$Hv*WLm@o+;!OfdDGs$G~+hj61VB0p9mX?ak
+z%gf`jSZuPTrR9-r+sm<7Ox9{OTT0ndtyT|sp4SIpz;)dLDdoVud-ujY&pSs5DNIaE
+znEn0zL36x+WupG#?c29MV2q8mw6yGd`t<2vjIpuK&d$q@<19w&YycF10U!jR07w9u
+zbKbGAuy9HUG1S`H`r7jH@-rdC(BZ>}f7}4%pT|*uVQOmXqf{#OooSk=R;!ox@8AE0
+z<2VZd_6Q+ttQMnYj5Uf<2tgt^!WfePRygOKj~_q&JRXk^20?&wx%_c&Z}0a_AZrl$
+ze4d^@eOleRb?d#od-whX06`FZnaO0n0gx0zFvgg|%Y6+*2tgTR0)SU26h1Lc^D_W=
+z{`~p-M~)o%xgM_pp|v&$A-Yf~yb*@s@9}tiPqkY8Dx1xIErdu%yWXt2H<b{=h%!^0
+zot^zO9*<wBR;w$9VZ4>eWd6`v6GDhG>I<~is8lK!UDw^iIlr9EW=Dk(X~tN%6#xLJ
+zuN6Y1v)Sw@=lrtkx_c^>%0;c$5^4YdAtaocnK_Y8r;inj#l^0!t`Pu9L}$MhfOV>S
+zB)hu0MvBGaVmh5ZHZwDGqW<q_WI`!5Y}+<$+a8OGkZm;s&5C@O<2VbpZI9Wu4W-m@
+z{W$@E>FMb=Ez6n;g5cS~g9qPn9H$Jx#18zD*NFfKIOnN{4<G(&n&v*=_j_}>+_V7z
+zTI-Xp>rzVTHOFxlg%E6q0RTV?A(-Phi<Hu9uIo~*^+{muIQo6xM=Tbb#A-F~Gynh~
+z@+GlYY|{6A0O(&2aj0A_!*QHP04yQIu0TY-mg6{&%H=Wu9BM#NO51(kuh_O-0$}cP
+zCQRG5OTO<{D5dRn2yGY!1>l>e>El1H_Z<+4;`mWq7yw8Zh6;cc1c8N}FUV%;D2^4y
+zT|Ew^)Dz3H5>iSRKoDI<JFdt#kW#vqWhInSPZ|&a?x#{IaLx|^@EK#f0ulN8obv;z
+zR0;s@uZNhhEDN<-tq-f;^KNEB*J`ys%d!Aqq5(k&xl$^Xlv3(A=e#4jf_EB(FvbMu
+zyhAB<yi_VFLdcZ{L@t-RBZRoo-rn9iKR-VRpp4b7X(vSil;`K?2ix1*TZIrea=F}{
+z1_S_5N=K!XkWvnD&N~5!s2|w2A|Jsy@03ywNhv`o9j!mF-yKFzPtVn2v3Nb5PIt`B
+z&5Z!?5VdRDWT<<1b8~Ye>2$iISS()e>FK!|jTCE{AcP>1NSrN|N-K`zoSL1T9cGLb
+zg%HM8Gg4n0bymZU<D4p$N-K#(;w&L+duuc``F!5UWHJvbmCBhQ2w+*(g+iflo-tNp
+zjQK(c6EB|?B7`s*V?JZ7R45eATb6Yp2m(|pl{1-4=0QH6H|kBztJQ5cgZyuEM>EJq
+z6Bwm*JQj;h#^dn~C$L(r)~A#jXlrXrODW-b-ni#^=Z+pdy4eKwYRsaq)KtFP*Y}G=
+Z{s!qFSEt!=$6Npa002ovPDHLkV1h80k|+QG
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-mdpi/touch_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-mdpi/touch_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..e8b346709131732f82353528e32c27de7dfd9a46
+GIT binary patch
+literal 1419
+zcmV;61$6p}P)<h;3K|Lk000e1NJLTq001EX001Ef1^@s6SLDKP000G2Nkl<Zc%03b
+z&u<e)6vw}_v%6z^Z6KRiQPLhzphB{xq(&(sCmN}t7Z6HYapw@EURoMadaI(|+Dhq<
+zOC|CjSZxu4OG%{^aR{OjA&6LlLWGny5pr-K-myKiJ3BpO?WAr(QGTd=ue<YopLz3k
+z=RIKi(%Us4FLc-10H6sW8UXIzz1vGEeOD><b{K|-wAQbirb&Vz(1egb4a2xkDg8|;
+z^-Fhm_f+IT01!e*xLKG@A+*+%5Tc^sgN9*z7>40MTU#4^--qXUkWy9%AyR8?+qRuZ
+zCX=u%3rkB&Fbrcn48tF~ySpzn`!$C$Hv*WLm@o+;!OfdDGs$G~+hj61VB0p9mX?ak
+z%gf`jSZuPTrR9-r+sm<7Ox9{OTT0ndtyT|sp4SIpz;)dLDdoVud-ujY&pSs5DNIaE
+znEn0zL36x+WupG#?c29MV2q8mw6yGd`t<2vjIpuK&d$q@<19w&YycF10U!jR07w9u
+zbKbGAuy9HUG1S`H`r7jH@-rdC(BZ>}f7}4%pT|*uVQOmXqf{#OooSk=R;!ox@8AE0
+z<2VZd_6Q+ttQMnYj5Uf<2tgt^!WfePRygOKj~_q&JRXk^20?&wx%_c&Z}0a_AZrl$
+ze4d^@eOleRb?d#od-whX06`FZnaO0n0gx0zFvgg|%Y6+*2tgTR0)SU26h1Lc^D_W=
+z{`~p-M~)o%xgM_pp|v&$A-Yf~yb*@s@9}tiPqkY8Dx1xIErdu%yWXt2H<b{=h%!^0
+zot^zO9*<wBR;w$9VZ4>eWd6`v6GDhG>I<~is8lK!UDw^iIlr9EW=Dk(X~tN%6#xLJ
+zuN6Y1v)Sw@=lrtkx_c^>%0;c$5^4YdAtaocnK_Y8r;inj#l^0!t`Pu9L}$MhfOV>S
+zB)hu0MvBGaVmh5ZHZwDGqW<q_WI`!5Y}+<$+a8OGkZm;s&5C@O<2VbpZI9Wu4W-m@
+z{W$@E>FMb=Ez6n;g5cS~g9qPn9H$Jx#18zD*NFfKIOnN{4<G(&n&v*=_j_}>+_V7z
+zTI-Xp>rzVTHOFxlg%E6q0RTV?A(-Phi<Hu9uIo~*^+{muIQo6xM=Tbb#A-F~Gynh~
+z@+GlYY|{6A0O(&2aj0A_!*QHP04yQIu0TY-mg6{&%H=Wu9BM#NO51(kuh_O-0$}cP
+zCQRG5OTO<{D5dRn2yGY!1>l>e>El1H_Z<+4;`mWq7yw8Zh6;cc1c8N}FUV%;D2^4y
+zT|Ew^)Dz3H5>iSRKoDI<JFdt#kW#vqWhInSPZ|&a?x#{IaLx|^@EK#f0ulN8obv;z
+zR0;s@uZNhhEDN<-tq-f;^KNEB*J`ys%d!Aqq5(k&xl$^Xlv3(A=e#4jf_EB(FvbMu
+zyhAB<yi_VFLdcZ{L@t-RBZRoo-rn9iKR-VRpp4b7X(vSil;`K?2ix1*TZIrea=F}{
+z1_S_5N=K!XkWvnD&N~5!s2|w2A|Jsy@03ywNhv`o9j!mF-yKFzPtVn2v3Nb5PIt`B
+z&5Z!?5VdRDWT<<1b8~Ye>2$iISS()e>FK!|jTCE{AcP>1NSrN|N-K`zoSL1T9cGLb
+zg%HM8Gg4n0bymZU<D4p$N-K#(;w&L+duuc``F!5UWHJvbmCBhQ2w+*(g+iflo-tNp
+zjQK(c6EB|?B7`s*V?JZ7R45eATb6Yp2m(|pl{1-4=0QH6H|kBztJQ5cgZyuEM>EJq
+z6Bwm*JQj;h#^dn~C$L(r)~A#jXlrXrODW-b-ni#^=Z+pdy4eKwYRsaq)KtFP*Y}G=
+Z{s!qFSEt!=$6Npa002ovPDHLkV1h80k|+QG
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-xhdpi/key_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-xhdpi/key_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..35f2ad1c3a8b5ef3001d332e0563acaf7c80b025
+GIT binary patch
+literal 3709
+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
+PZzW)B<$$QR@J{?6gkl_7
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-xhdpi/touch_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-xhdpi/touch_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..35f2ad1c3a8b5ef3001d332e0563acaf7c80b025
+GIT binary patch
+literal 3709
+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
+PZzW)B<$$QR@J{?6gkl_7
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-xxhdpi/key_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-xxhdpi/key_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..b7ff39ce0dc85712da0e5182cda20b3ca07ae1a9
+GIT binary patch
+literal 5831
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/drawable-xxhdpi/touch_selector.9.png b/overlay/LadrokKeyboardOverlay/res/drawable-xxhdpi/touch_selector.9.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..b7ff39ce0dc85712da0e5182cda20b3ca07ae1a9
+GIT binary patch
+literal 5831
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/overlay/LadrokKeyboardOverlay/res/values/color.xml b/overlay/LadrokKeyboardOverlay/res/values/color.xml
+new file mode 100644
+index 0000000..5876b52
+--- /dev/null
++++ b/overlay/LadrokKeyboardOverlay/res/values/color.xml
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <color name="keyboard_background">#FF000000</color>
++    <color name="candidate_background">#FF000000</color>
++    <color name="key_text_default">#FFE4E4E4</color>
++    <color name="candidate_font_color">#FFCFCFCF</color>
++    <color name="enter_key_font_color">#FFCFCFCF</color>
++    <color name="search_mic_background">#FFE4E4E4</color>
++    <color name="search_mic_levels_guideline">#FF8A8A8A</color>
++    <color name="ime_selector_color">#26E4E4E4</color>
++    <color name="ime_selector_focus_color">#66E4E4E4</color>
++</resources>
+diff --git a/overlay/LadrokPackageInstallerOverlay/Android.bp b/overlay/LadrokPackageInstallerOverlay/Android.bp
+new file mode 100644
+index 0000000..935b70e
+--- /dev/null
++++ b/overlay/LadrokPackageInstallerOverlay/Android.bp
+@@ -0,0 +1,8 @@
++// Ladrok TV black/grey theme for com.android.packageinstaller.
++runtime_resource_overlay {
++    name: "LadrokPackageInstallerOverlay",
++    resource_dirs: ["res"],
++    certificate: "platform",
++    product_specific: true,
++    sdk_version: "current",
++}
+diff --git a/overlay/LadrokPackageInstallerOverlay/AndroidManifest.xml b/overlay/LadrokPackageInstallerOverlay/AndroidManifest.xml
+new file mode 100644
+index 0000000..84701f3
+--- /dev/null
++++ b/overlay/LadrokPackageInstallerOverlay/AndroidManifest.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="tv.ladrok.overlay.packageinstaller">
++    <application android:hasCode="false" />
++    <overlay
++        android:targetPackage="com.android.packageinstaller"
++        android:isStatic="true"
++        android:priority="1" />
++</manifest>
+diff --git a/overlay/LadrokPackageInstallerOverlay/res/layout/lb_guidedstep_background.xml b/overlay/LadrokPackageInstallerOverlay/res/layout/lb_guidedstep_background.xml
+new file mode 100644
+index 0000000..9c68591
+--- /dev/null
++++ b/overlay/LadrokPackageInstallerOverlay/res/layout/lb_guidedstep_background.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<androidx.leanback.widget.NonOverlappingView xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/guidedstep_background"
++    android:transitionName="guidedstep_background"
++    android:layout_width="match_parent"
++    android:layout_height="match_parent"
++    android:background="#FF000000" />
+diff --git a/overlay/LadrokPackageInstallerOverlay/res/values-television/colors.xml b/overlay/LadrokPackageInstallerOverlay/res/values-television/colors.xml
+new file mode 100644
+index 0000000..4b4027e
+--- /dev/null
++++ b/overlay/LadrokPackageInstallerOverlay/res/values-television/colors.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <color name="lb_content_title_text_color">#FFE4E4E4</color>
++    <color name="lb_content_breadcrumb_text_color">#FF8A8A8A</color>
++    <color name="lb_content_description_text_color">#FF8A8A8A</color>
++    <color name="lb_action_fragment_background">#FF000000</color>
++    <color name="lb_dialog_activity_background">#E6000000</color>
++    <color name="lb_header_banner_color">#FF000000</color>
++    <color name="off_white">#FFE4E4E4</color>
++</resources>
+diff --git a/overlay/LadrokPackageInstallerOverlay/res/values/colors.xml b/overlay/LadrokPackageInstallerOverlay/res/values/colors.xml
+new file mode 100644
+index 0000000..5cd241b
+--- /dev/null
++++ b/overlay/LadrokPackageInstallerOverlay/res/values/colors.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <color name="lb_guidedactions_background">#FF000000</color>
++    <color name="lb_guidedactions_background_dark">#FF000000</color>
++    <color name="lb_guidedactions_item_unselected_text_color">#FFE4E4E4</color>
++    <color name="lb_action_text_color">#FFE4E4E4</color>
++</resources>
+diff --git a/overlay/LadrokSystemUIOverlay/Android.bp b/overlay/LadrokSystemUIOverlay/Android.bp
+new file mode 100644
+index 0000000..0d4f21e
+--- /dev/null
++++ b/overlay/LadrokSystemUIOverlay/Android.bp
+@@ -0,0 +1,8 @@
++// Ladrok TV black/grey theme for com.android.systemui.
++runtime_resource_overlay {
++    name: "LadrokSystemUIOverlay",
++    resource_dirs: ["res"],
++    certificate: "platform",
++    product_specific: true,
++    sdk_version: "current",
++}
+diff --git a/overlay/LadrokSystemUIOverlay/AndroidManifest.xml b/overlay/LadrokSystemUIOverlay/AndroidManifest.xml
+new file mode 100644
+index 0000000..3ccd830
+--- /dev/null
++++ b/overlay/LadrokSystemUIOverlay/AndroidManifest.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="tv.ladrok.overlay.systemui">
++    <application android:hasCode="false" />
++    <overlay
++        android:targetPackage="com.android.systemui"
++        android:isStatic="true"
++        android:priority="1" />
++</manifest>
+diff --git a/overlay/LadrokSystemUIOverlay/res/color/accent_tint_color_selector.xml b/overlay/LadrokSystemUIOverlay/res/color/accent_tint_color_selector.xml
+new file mode 100644
+index 0000000..f54f309
+--- /dev/null
++++ b/overlay/LadrokSystemUIOverlay/res/color/accent_tint_color_selector.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF8A8A8A" android:state_enabled="false" />
++    <item android:color="#FFCFCFCF" />
++</selector>
+diff --git a/overlay/LadrokSystemUIOverlay/res/drawable/volume_dialog_background.xml b/overlay/LadrokSystemUIOverlay/res/drawable/volume_dialog_background.xml
+new file mode 100644
+index 0000000..f4303ab
+--- /dev/null
++++ b/overlay/LadrokSystemUIOverlay/res/drawable/volume_dialog_background.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#E6000000" />
++    <corners android:radius="24dp" />
++</shape>
+diff --git a/overlay/LadrokSystemUIOverlay/res/drawable/volume_dialog_ringer_background.xml b/overlay/LadrokSystemUIOverlay/res/drawable/volume_dialog_ringer_background.xml
+new file mode 100644
+index 0000000..1dfb828
+--- /dev/null
++++ b/overlay/LadrokSystemUIOverlay/res/drawable/volume_dialog_ringer_background.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF121212" />
++    <corners android:radius="24dp" />
++</shape>
+diff --git a/overlay/LadrokSystemUIOverlay/res/values/colors.xml b/overlay/LadrokSystemUIOverlay/res/values/colors.xml
+new file mode 100644
+index 0000000..41ff68e
+--- /dev/null
++++ b/overlay/LadrokSystemUIOverlay/res/values/colors.xml
+@@ -0,0 +1,60 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <color name="volume_dialog_background_color">#E6000000</color>
++    <color name="volume_dialog_background_color_above_blur">#E6000000</color>
++    <color name="tv_volume_dialog_seek_bar_background">#FF262626</color>
++    <color name="tv_volume_dialog_seek_bar_fill">#FFCFCFCF</color>
++    <color name="tv_volume_dialog_accent">#FFCFCFCF</color>
++    <color name="tv_volume_dialog_circle">#00000000</color>
++    <color name="notification_default_background_color">#FF000000</color>
++    <color name="notification_blur_background_color">#E6000000</color>
++    <color name="notification_text_color">#FFE4E4E4</color>
++    <color name="bottom_sheet_icon_color">#FFE4E4E4</color>
++    <color name="bottom_sheet_title_color">#FFE4E4E4</color>
++    <color name="bottom_sheet_body_color">#FF8A8A8A</color>
++    <color name="bottom_sheet_background_color">#FF000000</color>
++    <color name="bottom_sheet_background_color_with_blur">#E6000000</color>
++    <color name="bottom_sheet_button_background_color_focused">#FFE4E4E4</color>
++    <color name="bottom_sheet_button_background_color_unfocused">#FF121212</color>
++    <color name="bottom_sheet_button_text_color_focused">#FF000000</color>
++    <color name="bottom_sheet_button_text_color_unfocused">#FFE4E4E4</color>
++    <color name="media_dialog_bg">#FF000000</color>
++    <color name="tv_panel_window_background">#FF000000</color>
++    <color name="media_dialog_item_bg_focused">#FFE4E4E4</color>
++    <color name="media_dialog_item_bg_unfocused">#FF121212</color>
++    <color name="media_dialog_icon_bg_focused">#FF262626</color>
++    <color name="media_dialog_icon_bg_unfocused">#FF262626</color>
++    <color name="media_dialog_icon_focused">#FFE4E4E4</color>
++    <color name="media_dialog_icon_unfocused">#FFE4E4E4</color>
++    <color name="media_dialog_settings_icon_focused">#FF000000</color>
++    <color name="media_dialog_settings_icon_unfocused">#FF8A8A8A</color>
++    <color name="media_dialog_title">#FFE4E4E4</color>
++    <color name="media_dialog_subtitle">#FF8A8A8A</color>
++    <color name="media_dialog_item_title_focused">#FF000000</color>
++    <color name="media_dialog_item_title_unfocused">#FFE4E4E4</color>
++    <color name="media_dialog_item_title_disabled">#FF4A4A4A</color>
++    <color name="media_dialog_item_subtitle_focused">#FF121212</color>
++    <color name="media_dialog_item_subtitle_unfocused">#FF8A8A8A</color>
++    <color name="media_dialog_item_subtitle_disabled">#FF4A4A4A</color>
++    <color name="media_dialog_divider_line">#FF262626</color>
++    <color name="media_dialog_divider_text">#FF8A8A8A</color>
++    <color name="media_dialog_low_battery_text">#FF8A8A8A</color>
++    <color name="media_dialog_low_battery_focused">#FF000000</color>
++    <color name="media_dialog_low_battery_unfocused">#FF8A8A8A</color>
++    <color name="preference_switch_thumb_on_default_color">#FFCFCFCF</color>
++    <color name="preference_switch_thumb_off_default_color">#FF8A8A8A</color>
++    <color name="preference_switch_thumb_disabled_color">#FF4A4A4A</color>
++    <color name="preference_switch_thumb_focused_color">#FFCFCFCF</color>
++    <color name="preference_control_on_default_color">#FFCFCFCF</color>
++    <color name="preference_control_off_default_color">#FF8A8A8A</color>
++    <color name="preference_control_on_focused_color">#FFCFCFCF</color>
++    <color name="preference_control_off_focused_color">#FF8A8A8A</color>
++    <color name="preference_control_disabled_focused_color">#FF4A4A4A</color>
++    <color name="preference_control_disabled_default_color">#FF4A4A4A</color>
++    <color name="seekbar_progress_focused_color">#FFCFCFCF</color>
++    <color name="seekbar_progress_unfocused_color">#FFCFCFCF</color>
++    <color name="seekbar_progress_background_focused_color">#FF262626</color>
++    <color name="seekbar_progress_background_unfocused_color">#FF262626</color>
++    <color name="progress_bar_color">#FFCFCFCF</color>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/Android.bp b/overlay/LadrokTvSettingsOverlay/Android.bp
+new file mode 100644
+index 0000000..3ddcf2e
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/Android.bp
+@@ -0,0 +1,8 @@
++// Ladrok TV black/grey theme for com.android.tv.settings.
++runtime_resource_overlay {
++    name: "LadrokTvSettingsOverlay",
++    resource_dirs: ["res"],
++    certificate: "platform",
++    product_specific: true,
++    sdk_version: "current",
++}
+diff --git a/overlay/LadrokTvSettingsOverlay/AndroidManifest.xml b/overlay/LadrokTvSettingsOverlay/AndroidManifest.xml
+new file mode 100644
+index 0000000..d037b12
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/AndroidManifest.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="tv.ladrok.overlay.tvsettings">
++    <application android:hasCode="false" />
++    <overlay
++        android:targetPackage="com.android.tv.settings"
++        android:isStatic="true"
++        android:priority="1" />
++</manifest>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/checkbox_focused_item_color.xml b/overlay/LadrokTvSettingsOverlay/res/color/checkbox_focused_item_color.xml
+new file mode 100644
+index 0000000..e2b47e1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/checkbox_focused_item_color.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FFCFCFCF" android:state_enabled="true" android:state_focused="true" android:state_checked="true" />
++    <item android:color="#FF8A8A8A" android:state_enabled="true" android:state_focused="true" />
++    <item android:color="#FFCFCFCF" android:state_enabled="true" android:state_checked="true" />
++    <item android:color="#FF8A8A8A" android:state_enabled="true" />
++    <item android:color="#FF4A4A4A" android:state_focused="true" />
++    <item android:color="#FF4A4A4A" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/dialog_button_background_color.xml b/overlay/LadrokTvSettingsOverlay/res/color/dialog_button_background_color.xml
+new file mode 100644
+index 0000000..1cd0572
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/dialog_button_background_color.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FFE4E4E4" android:state_focused="true" />
++    <item android:color="#FF121212" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/dialog_button_text_color.xml b/overlay/LadrokTvSettingsOverlay/res/color/dialog_button_text_color.xml
+new file mode 100644
+index 0000000..6f17283
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/dialog_button_text_color.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF000000" android:state_focused="true" />
++    <item android:color="#FFE4E4E4" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/high_contrast_guided_step_item_bg.xml b/overlay/LadrokTvSettingsOverlay/res/color/high_contrast_guided_step_item_bg.xml
+new file mode 100644
+index 0000000..4239adf
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/high_contrast_guided_step_item_bg.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF262626" android:state_focused="true" />
++    <item android:color="#00000000" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/password_switch_background_color.xml b/overlay/LadrokTvSettingsOverlay/res/color/password_switch_background_color.xml
+new file mode 100644
+index 0000000..1cd0572
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/password_switch_background_color.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FFE4E4E4" android:state_focused="true" />
++    <item android:color="#FF121212" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/setup_list_item_bg.xml b/overlay/LadrokTvSettingsOverlay/res/color/setup_list_item_bg.xml
+new file mode 100644
+index 0000000..4239adf
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/setup_list_item_bg.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF262626" android:state_focused="true" />
++    <item android:color="#00000000" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/color/two_panel_preference_icon_color.xml b/overlay/LadrokTvSettingsOverlay/res/color/two_panel_preference_icon_color.xml
+new file mode 100644
+index 0000000..4b441d1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/color/two_panel_preference_icon_color.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FFCFCFCF" android:state_focused="true" />
++    <item android:color="#FFCFCFCF" />
++</selector>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/accessory_preference_unfocused.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/accessory_preference_unfocused.xml
+new file mode 100644
+index 0000000..f75eeb6
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/accessory_preference_unfocused.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF121212" />
++    <corners android:radius="999dp" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/full_screen_dialog_background.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/full_screen_dialog_background.xml
+new file mode 100644
+index 0000000..c8f9c21
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/full_screen_dialog_background.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF000000" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/sensor_physical_privacy_enabled_info_bg_two_panel.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/sensor_physical_privacy_enabled_info_bg_two_panel.xml
+new file mode 100644
+index 0000000..f4f7e18
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/sensor_physical_privacy_enabled_info_bg_two_panel.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF121212" />
++    <corners android:radius="11dp" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/setup_text_input_background_two_panel.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/setup_text_input_background_two_panel.xml
+new file mode 100644
+index 0000000..bcd1f94
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/setup_text_input_background_two_panel.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF000000" />
++    <stroke android:width="2dp" android:color="#FFCFCFCF" />
++    <corners android:radius="11dp" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/setup_text_input_cursor.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/setup_text_input_cursor.xml
+new file mode 100644
+index 0000000..cb08763
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/setup_text_input_cursor.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<inset xmlns:android="http://schemas.android.com/apk/res/android"
++    android:inset="2dp">
++    <shape android:shape="rectangle">
++        <size android:height="1sp" android:width="2dp" />
++        <solid android:color="#FFE4E4E4" />
++    </shape>
++</inset>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/tp_switch_track.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/tp_switch_track.xml
+new file mode 100644
+index 0000000..8dba816
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/tp_switch_track.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF8A8A8A" />
++    <corners android:radius="999dp" />
++    <size android:width="40dp" android:height="24dp" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/two_panel_preference_focused.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/two_panel_preference_focused.xml
+new file mode 100644
+index 0000000..96b76e4
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/two_panel_preference_focused.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FF262626" />
++    <stroke android:width="1dp" android:color="#FF262626" />
++    <corners android:radius="999dp" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/drawable/wifi_checkbox_background.xml b/overlay/LadrokTvSettingsOverlay/res/drawable/wifi_checkbox_background.xml
+new file mode 100644
+index 0000000..bb584ee
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/drawable/wifi_checkbox_background.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="#FFCFCFCF" />
++    <corners android:radius="2dp" />
++</shape>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values-en-rAU/strings.xml b/overlay/LadrokTvSettingsOverlay/res/values-en-rAU/strings.xml
+new file mode 100644
+index 0000000..925c9d1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values-en-rAU/strings.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <string name="connectivity_network_category_title">Wi-Fi &amp; network</string>
++    <string name="remotes_and_accessories_category_title">Remote &amp; Bluetooth</string>
++    <string name="device_display_sound">Picture &amp; sound</string>
++    <string name="display_and_sound_category_title">Picture &amp; sound</string>
++    <string name="device_daydream">Screensaver</string>
++    <string name="device_pref_category_title">System</string>
++    <string name="connected_devices_slice_pref_title">Remote &amp; Bluetooth</string>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values-en-rCA/strings.xml b/overlay/LadrokTvSettingsOverlay/res/values-en-rCA/strings.xml
+new file mode 100644
+index 0000000..925c9d1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values-en-rCA/strings.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <string name="connectivity_network_category_title">Wi-Fi &amp; network</string>
++    <string name="remotes_and_accessories_category_title">Remote &amp; Bluetooth</string>
++    <string name="device_display_sound">Picture &amp; sound</string>
++    <string name="display_and_sound_category_title">Picture &amp; sound</string>
++    <string name="device_daydream">Screensaver</string>
++    <string name="device_pref_category_title">System</string>
++    <string name="connected_devices_slice_pref_title">Remote &amp; Bluetooth</string>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values-en-rGB/strings.xml b/overlay/LadrokTvSettingsOverlay/res/values-en-rGB/strings.xml
+new file mode 100644
+index 0000000..925c9d1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values-en-rGB/strings.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <string name="connectivity_network_category_title">Wi-Fi &amp; network</string>
++    <string name="remotes_and_accessories_category_title">Remote &amp; Bluetooth</string>
++    <string name="device_display_sound">Picture &amp; sound</string>
++    <string name="display_and_sound_category_title">Picture &amp; sound</string>
++    <string name="device_daydream">Screensaver</string>
++    <string name="device_pref_category_title">System</string>
++    <string name="connected_devices_slice_pref_title">Remote &amp; Bluetooth</string>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values-en-rIN/strings.xml b/overlay/LadrokTvSettingsOverlay/res/values-en-rIN/strings.xml
+new file mode 100644
+index 0000000..925c9d1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values-en-rIN/strings.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <string name="connectivity_network_category_title">Wi-Fi &amp; network</string>
++    <string name="remotes_and_accessories_category_title">Remote &amp; Bluetooth</string>
++    <string name="device_display_sound">Picture &amp; sound</string>
++    <string name="display_and_sound_category_title">Picture &amp; sound</string>
++    <string name="device_daydream">Screensaver</string>
++    <string name="device_pref_category_title">System</string>
++    <string name="connected_devices_slice_pref_title">Remote &amp; Bluetooth</string>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values/colors.xml b/overlay/LadrokTvSettingsOverlay/res/values/colors.xml
+new file mode 100644
+index 0000000..1cf8588
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values/colors.xml
+@@ -0,0 +1,103 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <color name="settings_background">#FF000000</color>
++    <color name="background">#FF000000</color>
++    <color name="lb_preference_decor_list_background">#FF000000</color>
++    <color name="tp_preference_window_background">#00000000</color>
++    <color name="tp_fragment_container_background_color">#FF000000</color>
++    <color name="tp_preview_panel_background_color">#FF000000</color>
++    <color name="tp_preference_panel_background_color">#FF000000</color>
++    <color name="color_correction_palette_gradient_background_twopanel">#FF000000</color>
++    <color name="pin_dialog_background">#FF000000</color>
++    <color name="pin_number_picker_focused_background">#FF262626</color>
++    <color name="lb_action_fragment_background">#FF000000</color>
++    <color name="icon_background">#FF121212</color>
++    <color name="toast_notification_background">#E6000000</color>
++    <color name="dialog_background">#FF121212</color>
++    <color name="legacy_app_item_background">#FF121212</color>
++    <color name="normal">#FFE4E4E4</color>
++    <color name="tp_preference_item_primary_text_default_color">#FFE4E4E4</color>
++    <color name="tp_preference_item_primary_text_focused_color">#FFE4E4E4</color>
++    <color name="tp_preference_item_primary_text_disabled_color">#FF4A4A4A</color>
++    <color name="tp_preference_item_secondary_text_default_color">#FF8A8A8A</color>
++    <color name="tp_preference_item_secondary_text_focused_color">#FF8A8A8A</color>
++    <color name="tp_preference_item_secondary_text_disabled_color">#FF4A4A4A</color>
++    <color name="tp_preference_category_text_color">#FF8A8A8A</color>
++    <color name="tp_preference_decor_title_text_color">#FF8A8A8A</color>
++    <color name="info_title_text_color">#FFE4E4E4</color>
++    <color name="info_subtitle_text_color">#FF8A8A8A</color>
++    <color name="info_separator">#FF262626</color>
++    <color name="info_status_on">#FFE4E4E4</color>
++    <color name="info_status_off">#FF8A8A8A</color>
++    <color name="eco_hint_color">#FF8A8A8A</color>
++    <color name="lb_content_title_text_color">#FFE4E4E4</color>
++    <color name="lb_content_breadcrumb_text_color">#FF8A8A8A</color>
++    <color name="lb_content_description_text_color">#FF8A8A8A</color>
++    <color name="content_title_text_color">#FFE4E4E4</color>
++    <color name="content_breadcrumb_text_color">#FF8A8A8A</color>
++    <color name="content_description_text_color">#FF8A8A8A</color>
++    <color name="content_fragment_default_icon_color">#FF262626</color>
++    <color name="lb_dialog_list_item_unselected_text_color">#FFE4E4E4</color>
++    <color name="list_item_unselected_text_color">#FFE4E4E4</color>
++    <color name="lb_dialog_list_item_divider_color">#FF262626</color>
++    <color name="lb_dialog_selector_color">#FFE4E4E4</color>
++    <color name="lb_tv_white">#FFE4E4E4</color>
++    <color name="tv_white">#FFE4E4E4</color>
++    <color name="indigo_500">#FFCFCFCF</color>
++    <color name="pin_dialog_text_color_enabled">#FFE4E4E4</color>
++    <color name="pin_dialog_text_color_disabled">#FF4A4A4A</color>
++    <color name="toast_notification_text_color">#FFE4E4E4</color>
++    <color name="add_accessory_hint_text_color">#FFE4E4E4</color>
++    <color name="setup_primary_text_color">#FFE4E4E4</color>
++    <color name="activity_progress_text">#FFE4E4E4</color>
++    <color name="setup_list_item">#FFE4E4E4</color>
++    <color name="setup_list_item_focused">#FFE4E4E4</color>
++    <color name="setup_list_item_icon_focused">#FFE4E4E4</color>
++    <color name="setup_list_item_background_focused">#FF262626</color>
++    <color name="setup_list_item_background_focused_blue">#FF262626</color>
++    <color name="guided_step_text_input_item_background_focused">#FF262626</color>
++    <color name="overlay_blended_light_primary">#FFE4E4E4</color>
++    <color name="overlay_blended_light_secondary">#FF8A8A8A</color>
++    <color name="tp_preference_brand_color">#00000000</color>
++    <color name="preference_icon_color">#FFCFCFCF</color>
++    <color name="tp_preference_item_icon_focused_background_color">#FF262626</color>
++    <color name="tp_preference_item_icon_default_background_color">#00000000</color>
++    <color name="tp_preference_wifi_signal_lock_focused">#FFE4E4E4</color>
++    <color name="tp_preference_wifi_signal_lock_unfocused">#FFE4E4E4</color>
++    <color name="tp_preference_control_on_default_color">#FFCFCFCF</color>
++    <color name="tp_preference_control_on_focused_color">#FFCFCFCF</color>
++    <color name="tp_preference_control_off_default_color">#FF8A8A8A</color>
++    <color name="tp_preference_control_off_focused_color">#FF8A8A8A</color>
++    <color name="tp_preference_control_disabled_focused_color">#FF4A4A4A</color>
++    <color name="tp_preference_control_disabled_default_color">#FF4A4A4A</color>
++    <color name="tp_dialog_scrollbar_color">#FF262626</color>
++    <color name="qr_dot_color">#FFCFCFCF</color>
++    <color name="qr_finder_inner_dot_color">#FFE4E4E4</color>
++    <color name="qr_finder_outer_ring_color">#FFCFCFCF</color>
++    <color name="qr_boundary_markers_color">#FF262626</color>
++    <color name="tp_preference_switch_thumb_on_default_color">#FFCFCFCF</color>
++    <color name="tp_preference_switch_thumb_off_default_color">#FF8A8A8A</color>
++    <color name="tp_preference_switch_thumb_on_default_disabled_color">#FF4A4A4A</color>
++    <color name="tp_preference_switch_thumb_off_default_disabled_color">#FF4A4A4A</color>
++    <color name="tp_preference_switch_track_on_default_color">#FF8A8A8A</color>
++    <color name="tp_preference_switch_track_off_default_color">#FF262626</color>
++    <color name="tp_preference_switch_track_on_default_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_track_off_default_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_track_decoration_on_default_color">#FF8A8A8A</color>
++    <color name="tp_preference_switch_track_decoration_off_default_color">#FF262626</color>
++    <color name="tp_preference_switch_track_decoration_on_default_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_track_decoration_off_default_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_thumb_on_focused_color">#FFCFCFCF</color>
++    <color name="tp_preference_switch_thumb_off_focused_color">#FF8A8A8A</color>
++    <color name="tp_preference_switch_thumb_on_focused_disabled_color">#FF4A4A4A</color>
++    <color name="tp_preference_switch_thumb_off_focused_disabled_color">#FF4A4A4A</color>
++    <color name="tp_preference_switch_track_on_focused_color">#FF8A8A8A</color>
++    <color name="tp_preference_switch_track_off_focused_color">#FF262626</color>
++    <color name="tp_preference_switch_track_on_focused_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_track_off_focused_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_track_decoration_on_focused_color">#FF8A8A8A</color>
++    <color name="tp_preference_switch_track_decoration_off_focused_color">#FF262626</color>
++    <color name="tp_preference_switch_track_decoration_on_focused_disabled_color">#FF262626</color>
++    <color name="tp_preference_switch_track_decoration_off_focused_disabled_color">#FF262626</color>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values/strings.xml b/overlay/LadrokTvSettingsOverlay/res/values/strings.xml
+new file mode 100644
+index 0000000..925c9d1
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values/strings.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <string name="connectivity_network_category_title">Wi-Fi &amp; network</string>
++    <string name="remotes_and_accessories_category_title">Remote &amp; Bluetooth</string>
++    <string name="device_display_sound">Picture &amp; sound</string>
++    <string name="display_and_sound_category_title">Picture &amp; sound</string>
++    <string name="device_daydream">Screensaver</string>
++    <string name="device_pref_category_title">System</string>
++    <string name="connected_devices_slice_pref_title">Remote &amp; Bluetooth</string>
++</resources>
+diff --git a/overlay/LadrokTvSettingsOverlay/res/values/styles.xml b/overlay/LadrokTvSettingsOverlay/res/values/styles.xml
+new file mode 100644
+index 0000000..648199c
+--- /dev/null
++++ b/overlay/LadrokTvSettingsOverlay/res/values/styles.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV black/grey theme (generated by the Ladrok overlay script). -->
++<resources>
++    <style name="ConnectivityTextInputTwoPanel">
++        <item name="android:fontFamily">sans-serif</item>
++        <item name="android:background">@android:color/transparent</item>
++        <item name="android:textCursorDrawable">@drawable/setup_text_input_cursor</item>
++        <item name="android:textColor">#FFE4E4E4</item>
++        <item name="android:textSize">16sp</item>
++    </style>
++</resources>
 diff --git a/ramdisk/fstab.rpi5 b/ramdisk/fstab.rpi5
 index 21d8468..1356038 100644
 --- a/ramdisk/fstab.rpi5
