@@ -11,6 +11,7 @@ declare -A PROJECTS=(
   [system/sepolicy]=system_sepolicy.patch
   [packages/apps/TvSettings]=packages_apps_TvSettings.patch
   [frameworks/base]=frameworks_base.patch
+  [packages/modules/Permission]=packages_modules_Permission.patch
 )
 for p in "${!PROJECTS[@]}"; do
   f="$DIR/${PROJECTS[$p]}"

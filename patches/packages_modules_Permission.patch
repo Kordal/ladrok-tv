@@ -1,0 +1,199 @@
+diff --git a/PermissionController/res/color-television/ladrok_black.xml b/PermissionController/res/color-television/ladrok_black.xml
+new file mode 100644
+index 0000000..cb4724c
+--- /dev/null
++++ b/PermissionController/res/color-television/ladrok_black.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV palette. A file, not a <color> value: values get inlined into the theme, and
++     Utils.applyTint() needs a resource id behind the attribute. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF000000" />
++</selector>
+diff --git a/PermissionController/res/color-television/ladrok_ink.xml b/PermissionController/res/color-television/ladrok_ink.xml
+new file mode 100644
+index 0000000..0799d05
+--- /dev/null
++++ b/PermissionController/res/color-television/ladrok_ink.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV palette. A file, not a <color> value: values get inlined into the theme, and
++     Utils.applyTint() needs a resource id behind the attribute. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FFE4E4E4" />
++</selector>
+diff --git a/PermissionController/res/color-television/ladrok_line.xml b/PermissionController/res/color-television/ladrok_line.xml
+new file mode 100644
+index 0000000..0a85b34
+--- /dev/null
++++ b/PermissionController/res/color-television/ladrok_line.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV palette. A file, not a <color> value: values get inlined into the theme, and
++     Utils.applyTint() needs a resource id behind the attribute. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF262626" />
++</selector>
+diff --git a/PermissionController/res/color-television/ladrok_muted.xml b/PermissionController/res/color-television/ladrok_muted.xml
+new file mode 100644
+index 0000000..a97fe64
+--- /dev/null
++++ b/PermissionController/res/color-television/ladrok_muted.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV palette. A file, not a <color> value: values get inlined into the theme, and
++     Utils.applyTint() needs a resource id behind the attribute. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF8A8A8A" />
++</selector>
+diff --git a/PermissionController/res/color-television/ladrok_raised.xml b/PermissionController/res/color-television/ladrok_raised.xml
+new file mode 100644
+index 0000000..17f9cb7
+--- /dev/null
++++ b/PermissionController/res/color-television/ladrok_raised.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV palette. A file, not a <color> value: values get inlined into the theme, and
++     Utils.applyTint() needs a resource id behind the attribute. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FF121212" />
++</selector>
+diff --git a/PermissionController/res/color-television/ladrok_silver.xml b/PermissionController/res/color-television/ladrok_silver.xml
+new file mode 100644
+index 0000000..5d18d4d
+--- /dev/null
++++ b/PermissionController/res/color-television/ladrok_silver.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV palette. A file, not a <color> value: values get inlined into the theme, and
++     Utils.applyTint() needs a resource id behind the attribute. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:color="#FFCFCFCF" />
++</selector>
+diff --git a/PermissionController/res/drawable-television/ladrok_preference_item_background.xml b/PermissionController/res/drawable-television/ladrok_preference_item_background.xml
+new file mode 100644
+index 0000000..a6da529
+--- /dev/null
++++ b/PermissionController/res/drawable-television/ladrok_preference_item_background.xml
+@@ -0,0 +1,16 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Ladrok TV: focused rows get the TvSettings pill (Line, fully rounded) instead of a
++     full-width bar. Layer insets don't add padding, so the rows keep their own. -->
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_focused="true">
++        <layer-list>
++            <item android:left="8dp" android:right="8dp" android:top="2dp" android:bottom="2dp">
++                <shape android:shape="rectangle">
++                    <solid android:color="#FF262626" />
++                    <corners android:radius="999dp" />
++                </shape>
++            </item>
++        </layer-list>
++    </item>
++    <item android:drawable="@android:color/transparent" />
++</selector>
+diff --git a/PermissionController/res/layout-television/header.xml b/PermissionController/res/layout-television/header.xml
+index 56e35db..e4834fc 100644
+--- a/PermissionController/res/layout-television/header.xml
++++ b/PermissionController/res/layout-television/header.xml
+@@ -36,7 +36,7 @@
+                 android:layout_marginTop="@dimen/lb_preference_decor_title_margin_top"
+                 android:layout_marginStart="@dimen/lb_preference_decor_title_margin_start"
+                 android:layout_marginEnd="@dimen/lb_preference_decor_title_margin_end"
+-                android:fontFamily="sans-serif-condensed"
++                android:fontFamily="sans-serif"
+                 android:gravity="center_vertical"
+                 android:singleLine="true"
+                 android:textSize="@dimen/lb_preference_decor_title_text_size"
+diff --git a/PermissionController/res/values-television/colors.xml b/PermissionController/res/values-television/colors.xml
+index f2a0a26..5f07278 100644
+--- a/PermissionController/res/values-television/colors.xml
++++ b/PermissionController/res/values-television/colors.xml
+@@ -16,33 +16,33 @@
+ 
+ <resources>
+ 
+-    <color name="lb_content_title_text_color">#FFF1F1F1</color>
+-    <color name="lb_content_breadcrumb_text_color">#88F1F1F1</color>
+-    <color name="lb_content_description_text_color">#88F1F1F1</color>
+-    <color name="lb_action_fragment_background">#FF111111</color>
+-    <color name="lb_dialog_activity_background">#77000000</color>
++    <color name="lb_content_title_text_color">#FFE4E4E4</color>
++    <color name="lb_content_breadcrumb_text_color">#FF8A8A8A</color>
++    <color name="lb_content_description_text_color">#FF8A8A8A</color>
++    <color name="lb_action_fragment_background">#FF000000</color>
++    <color name="lb_dialog_activity_background">#E6000000</color>
+ 
+-    <color name="lb_header_banner_color">#1f292d</color>
++    <color name="lb_header_banner_color">#FF121212</color>
+ 
+-    <color name="lb_preference_decor_list_background">#FF202124</color>
++    <color name="lb_preference_decor_list_background">#FF000000</color>
+ 
+-    <color name="grant_permissions_background_color">#FF263238</color>
+-    <color name="grant_permissions_background_color_with_blur">#BB263238</color>
++    <color name="grant_permissions_background_color">#FF000000</color>
++    <color name="grant_permissions_background_color_with_blur">#E6000000</color>
+     <color name="grant_permissions_app_color">@color/grant_permissions_white_text_alpha_100</color>
+     <color name="grant_permissions_progress_color">@color/grant_permissions_white_text_alpha_100</color>
+-    <color name="grant_permissions_title_color">@color/grant_permissions_white_text_alpha_70</color>
+-    <color name="grant_permissions_body_color">@color/grant_permissions_white_text_alpha_70</color>
+-    <color name="grant_permissions_button_background_color_unfocused">#1AFFFFFF</color>
+-    <color name="grant_permissions_button_background_color_focused">#E8EAED</color>
++    <color name="grant_permissions_title_color">#FFE4E4E4</color>
++    <color name="grant_permissions_body_color">#FF8A8A8A</color>
++    <color name="grant_permissions_button_background_color_unfocused">#FF121212</color>
++    <color name="grant_permissions_button_background_color_focused">#FFE4E4E4</color>
+     <color name="grant_permissions_button_color">@color/grant_permissions_white_text_alpha_100</color>
+-    <color name="grant_permissions_focus_highlight">#26eeeeee</color>
+-    <color name="grant_permissions_button_text_color_unfocused">@color/grant_permissions_white_text_alpha_70</color>
+-    <color name="grant_permissions_button_text_color_focused">#000000</color>
++    <color name="grant_permissions_focus_highlight">#FF262626</color>
++    <color name="grant_permissions_button_text_color_unfocused">#FFE4E4E4</color>
++    <color name="grant_permissions_button_text_color_focused">#FF000000</color>
+ 
+     <color name="grant_permissions_white_text_alpha_100">@color/off_white</color>
+-    <color name="grant_permissions_white_text_alpha_70">#b2eeeeee</color>
++    <color name="grant_permissions_white_text_alpha_70">#FF8A8A8A</color>
+ 
+-    <color name="off_white">#ffeeeeee</color>
++    <color name="off_white">#FFE4E4E4</color>
+ 
+-    <color name="settings_category_text_color">#FF51AAFF</color>
++    <color name="settings_category_text_color">#FF8A8A8A</color>
+ </resources>
+diff --git a/PermissionController/res/values-television/themes.xml b/PermissionController/res/values-television/themes.xml
+index 2c239eb..21c9ca4 100644
+--- a/PermissionController/res/values-television/themes.xml
++++ b/PermissionController/res/values-television/themes.xml
+@@ -22,6 +22,20 @@
+         <item name="android:windowIsTranslucent">true</item>
+         <item name="android:backgroundDimEnabled">true</item>
+         <item name="android:backgroundDimAmount">0.8</item>
++        <!-- Ladrok TV: black/grey palette, as in TvSettings. @color references, not literals:
++             Utils.applyTint() reads the attribute's resource id (see color-television/). -->
++        <item name="defaultBrandColor">@color/ladrok_black</item>
++        <item name="defaultBrandColorDark">@color/ladrok_black</item>
++        <item name="android:colorPrimary">@color/ladrok_black</item>
++        <item name="android:colorPrimaryDark">@color/ladrok_black</item>
++        <item name="android:colorAccent">@color/ladrok_silver</item>
++        <item name="android:colorControlActivated">@color/ladrok_silver</item>
++        <item name="android:colorControlNormal">@color/ladrok_silver</item>
++        <item name="android:colorControlHighlight">@color/ladrok_line</item>
++        <item name="android:colorForeground">@color/ladrok_ink</item>
++        <item name="android:textColorPrimary">@color/ladrok_ink</item>
++        <item name="android:textColorSecondary">@color/ladrok_muted</item>
++        <item name="android:selectableItemBackground">@drawable/ladrok_preference_item_background</item>
+     </style>
+ 
+     <style name="Theme.PermissionController.Settings" parent="Settings" />
+@@ -33,6 +47,9 @@
+         <item name="android:backgroundDimAmount">0.2</item>
+         <item name="android:windowBackground">@drawable/dialog_background</item>
+         <item name="android:windowIsTranslucent">true</item>
++        <!-- Ladrok TV -->
++        <item name="android:colorAccent">@color/ladrok_silver</item>
++        <item name="android:colorControlHighlight">@color/ladrok_line</item>
+     </style>
+ 
+     <style name="GrantPermissions.BreadcrumbText">

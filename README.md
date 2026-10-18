@@ -113,7 +113,7 @@ The official images are built the same way, on a local machine (WSL2). GitHub Ac
 
 | Path | What |
 |---|---|
-| `patches/` | Changes to the AOSP tree, one patch per project (`device/brcm/rpi5`, `device/google/atv`, `build/make`, `system/sepolicy`, `packages/apps/TvSettings`, `frameworks/base`) |
+| `patches/` | Changes to the AOSP tree, one patch per project (`device/brcm/rpi5`, `device/google/atv`, `build/make`, `system/sepolicy`, `packages/apps/TvSettings`, `packages/modules/Permission`, `frameworks/base`) |
 | `.github/` | Claude BugBot review on pull requests (`bugbot.yml`, needs the `CLAUDE_SETUP_TOKEN` secret), release announcements on Discord, and the Discord server's settings (`discord/server.json`, applied by `discord-admin.yml`) |
 | `scripts/` | sync, apply/export patches, `fetch-prebuilts.sh` (Launcher and Store APKs), build, `mkimg-ab.sh` (card image), `make-ota.sh` (signed release: OTA, update config, card image), flash scripts |
 | `tools/` | `make-release-keys.sh` and `sign-target-files.sh` (release signing), `connect.ps1` (wireless adb via mDNS; if the TV isn't found, use `adb connect <ip>:<port>` from Developer options → Wireless debugging), `ab-status.sh` (slot and tryboot state on the device), `test-fallback.sh` (rollback test), `ota-sideload.ps1` (install an OTA over adb), `make-logo-assets.py` (boot animation and icons from the logo) |
