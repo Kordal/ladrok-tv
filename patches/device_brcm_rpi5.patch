@@ -30329,6 +30329,45 @@ index 0000000..648199c
 +        <item name="android:textSize">16sp</item>
 +    </style>
 +</resources>
+diff --git a/overlay/SettingsProviderRpiOverlay/res/values/defaults.xml b/overlay/SettingsProviderRpiOverlay/res/values/defaults.xml
+index de50395..57dc623 100644
+--- a/overlay/SettingsProviderRpiOverlay/res/values/defaults.xml
++++ b/overlay/SettingsProviderRpiOverlay/res/values/defaults.xml
+@@ -19,7 +19,7 @@
+ <resources>
+ 
+     <!-- Default for Settings.Global.DEVICE_NAME $1=MODEL -->
+-    <string name="def_device_name_simple">Raspberry Pi 5</string>
++    <string name="def_device_name_simple">Ladrok TV</string>
+ 
+     <!-- Default screen brightness -->
+     <integer name="def_screen_brightness">128</integer>
+diff --git a/overlay/SettingsProviderTvRpiOverlay/res/values/defaults.xml b/overlay/SettingsProviderTvRpiOverlay/res/values/defaults.xml
+index 4b6122d..d807ea4 100644
+--- a/overlay/SettingsProviderTvRpiOverlay/res/values/defaults.xml
++++ b/overlay/SettingsProviderTvRpiOverlay/res/values/defaults.xml
+@@ -19,7 +19,7 @@
+ <resources>
+ 
+     <!-- Default for Settings.Global.DEVICE_NAME $1=MODEL -->
+-    <string name="def_device_name_simple">Raspberry Pi 5</string>
++    <string name="def_device_name_simple">Ladrok TV</string>
+ 
+     <!-- Default screen brightness -->
+     <integer name="def_screen_brightness">128</integer>
+diff --git a/overlay/WifiRpiOverlay/res/values/config.xml b/overlay/WifiRpiOverlay/res/values/config.xml
+index ad014c4..7db3f42 100644
+--- a/overlay/WifiRpiOverlay/res/values/config.xml
++++ b/overlay/WifiRpiOverlay/res/values/config.xml
+@@ -34,7 +34,7 @@
+     <bool translatable="false" name="config_wifi_softap_ieee80211ac_supported">true</bool>
+ 
+     <!-- Do not translate. Default access point SSID used for tethering -->
+-    <string name="wifi_tether_configure_ssid_default" translatable="false">Raspberry Pi 5</string>
++    <string name="wifi_tether_configure_ssid_default" translatable="false">Ladrok TV</string>
+ 
+     <!-- Indicate whether the verbose logging is always on -->
+     <!-- 0: verbose logging controlled by user
 diff --git a/ramdisk/fstab.rpi5 b/ramdisk/fstab.rpi5
 index 21d8468..1356038 100644
 --- a/ramdisk/fstab.rpi5
@@ -31110,16 +31149,23 @@ index 0000000..bcdf226
 +allow { appdomain -isolated_app_all -sdk_sandbox_all } mediaswcodec_tmpfs:file { getattr map read write };
 +typeattribute mediaswcodec_tmpfs mlstrustedobject;
 diff --git a/vendor.prop b/vendor.prop
-index 37c5a94..8a7ca55 100644
+index 37c5a94..f97b969 100644
 --- a/vendor.prop
 +++ b/vendor.prop
-@@ -1,6 +1,5 @@
+@@ -1,12 +1,11 @@
  # Audio
  persist.vendor.audio.device=hdmi0
 -ro.boot.audio.tinyalsa.simulate_input=true
  ro.config.media_vol_default=20
  ro.config.media_vol_steps=25
  
+ # Bluetooth
+ bluetooth.device.class_of_device?=90,2,12
+-bluetooth.device.default_name=Raspberry Pi 5
++bluetooth.device.default_name=Ladrok TV
+ bluetooth.profile.a2dp.sink.enabled?=true
+ bluetooth.profile.a2dp.source.enabled?=true
+ bluetooth.profile.asha.central.enabled?=true
 @@ -30,7 +29,6 @@ bluetooth.profile.pan.panu.enabled?=true
  bluetooth.profile.pbap.server.enabled?=true
  bluetooth.profile.sap.server.enabled?=true
