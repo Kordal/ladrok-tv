@@ -4,7 +4,7 @@
 
 Android TV (AOSP 17) for the **Raspberry Pi 5**, based on [raspberry-vanilla](https://github.com/raspberry-vanilla) (KonstaKANG's AOSP device trees), with:
 
-- **First-boot setup**: language, country and time zone, using the TV remote. The country sets the Wi-Fi regulatory domain, so 5 GHz channels work. Nothing is hard-coded to a region.
+- **First-boot setup**: language, country and time zone, using the TV remote. The country sets the Wi-Fi regulatory domain, so 5 GHz channels work. Nothing is hard-coded to a region. A last page shows a QR code that downloads [Ladrok Remote](https://github.com/Kordal/ladrok-remote) and keeps the TV discoverable, so a phone can pair as the remote right there; it can be skipped.
 - **Over-the-air updates (A/B)**: the system updates in the background while you keep watching. A signed package is installed into the inactive slot by `update_engine`, then the TV restarts into it. If the new version doesn't start, the Pi firmware boots the previous one again.
 - **A quiet home screen**: [Ladrok Launcher](https://github.com/Kordal/ladrok-start).
   - On the left: a large Continue card for the last thing you watched, then Watch Next and the Channels you pick.

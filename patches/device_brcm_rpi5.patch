@@ -538,15 +538,24 @@ index 0000000..0a4b2ab
 +</permissions>
 diff --git a/LadrokSetup/Android.bp b/LadrokSetup/Android.bp
 new file mode 100644
-index 0000000..30ae655
+index 0000000..ee4c43e
 --- /dev/null
 +++ b/LadrokSetup/Android.bp
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,47 @@
 +//
 +// SPDX-License-Identifier: Apache-2.0
 +//
 +// First-boot setup for the Raspberry Pi 5 TV build: language, country (Wi-Fi regulatory
-+// domain) and time zone. Replaces TvProvision, which only set the provisioned flags.
++// domain), time zone and pairing a phone running Ladrok Remote. Replaces TvProvision, which
++// only set the provisioned flags.
++
++prebuilt_etc {
++    name: "default_permissions_tv.ladrok.setup",
++    system_ext_specific: true,
++    sub_dir: "default-permissions",
++    src: "default-permissions-tv.ladrok.setup.xml",
++    filename_from_src: true,
++}
 +
 +prebuilt_etc {
 +    name: "privapp_whitelist_tv.ladrok.setup",
@@ -572,17 +581,20 @@ index 0000000..30ae655
 +        "androidx.activity_activity",
 +        "androidx.leanback_leanback",
 +    ],
-+    required: ["privapp_whitelist_tv.ladrok.setup"],
++    required: [
++        "default_permissions_tv.ladrok.setup",
++        "privapp_whitelist_tv.ladrok.setup",
++    ],
 +    optimize: {
 +        enabled: false,
 +    },
 +}
 diff --git a/LadrokSetup/AndroidManifest.xml b/LadrokSetup/AndroidManifest.xml
 new file mode 100644
-index 0000000..8d20a96
+index 0000000..9f09247
 --- /dev/null
 +++ b/LadrokSetup/AndroidManifest.xml
-@@ -0,0 +1,36 @@
+@@ -0,0 +1,41 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -597,6 +609,11 @@ index 0000000..8d20a96
 +    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 +    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 +    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
++    <!-- Remote step: keep the TV discoverable and follow pairing and the HID connection -->
++    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
++    <uses-permission android:name="android.permission.BLUETOOTH_PRIVILEGED" />
++    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
++            android:usesPermissionFlags="neverForLocation" />
 +
 +    <uses-feature android:name="android.software.leanback" android:required="false" />
 +    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -619,6 +636,42 @@ index 0000000..8d20a96
 +        </activity>
 +    </application>
 +</manifest>
+diff --git a/LadrokSetup/default-permissions-tv.ladrok.setup.xml b/LadrokSetup/default-permissions-tv.ladrok.setup.xml
+new file mode 100644
+index 0000000..d971638
+--- /dev/null
++++ b/LadrokSetup/default-permissions-tv.ladrok.setup.xml
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Runtime Bluetooth permissions for the Remote step; setup can't stop to ask for them -->
++<exceptions>
++    <exception package="tv.ladrok.setup">
++        <permission name="android.permission.BLUETOOTH_CONNECT" fixed="true" />
++        <permission name="android.permission.BLUETOOTH_SCAN" fixed="true" />
++    </exception>
++</exceptions>
+diff --git a/LadrokSetup/res/drawable/remote_qr.xml b/LadrokSetup/res/drawable/remote_qr.xml
+new file mode 100644
+index 0000000..897688b
+--- /dev/null
++++ b/LadrokSetup/res/drawable/remote_qr.xml
+@@ -0,0 +1,15 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- QR code of https://github.com/Kordal/ladrok-remote/releases/latest/download/LadrokRemote.apk
++     (the newest Ladrok Remote APK). Generated with segno, error correction M; regenerate if the
++     address changes. Dark modules on white, with a 3-module quiet zone. -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++        android:width="258dp"
++        android:height="258dp"
++        android:viewportWidth="43"
++        android:viewportHeight="43">
++    <path android:fillColor="#FFFFFF"
++          android:pathData="M1,0h41a1,1 0 0 1 1,1v41a1,1 0 0 1 -1,1h-41a1,1 0 0 1 -1,-1v-41a1,1 0 0 1 1,-1z" />
++    <path android:fillColor="#000000"
++          android:pathData="M3,3h7v1h-7zM11,3h2v1h-2zM14,3h1v1h-1zM17,3h2v1h-2zM21,3h1v1h-1zM24,3h1v1h-1zM26,3h1v1h-1zM28,3h1v1h-1zM30,3h2v1h-2zM33,3h7v1h-7zM3,4h1v1h-1zM9,4h1v1h-1zM13,4h1v1h-1zM15,4h1v1h-1zM17,4h1v1h-1zM19,4h5v1h-5zM25,4h1v1h-1zM29,4h1v1h-1zM31,4h1v1h-1zM33,4h1v1h-1zM39,4h1v1h-1zM3,5h1v1h-1zM5,5h3v1h-3zM9,5h1v1h-1zM12,5h1v1h-1zM14,5h4v1h-4zM19,5h2v1h-2zM23,5h4v1h-4zM29,5h1v1h-1zM33,5h1v1h-1zM35,5h3v1h-3zM39,5h1v1h-1zM3,6h1v1h-1zM5,6h3v1h-3zM9,6h1v1h-1zM11,6h1v1h-1zM14,6h1v1h-1zM16,6h1v1h-1zM18,6h2v1h-2zM21,6h1v1h-1zM23,6h1v1h-1zM25,6h2v1h-2zM28,6h2v1h-2zM31,6h1v1h-1zM33,6h1v1h-1zM35,6h3v1h-3zM39,6h1v1h-1zM3,7h1v1h-1zM5,7h3v1h-3zM9,7h1v1h-1zM11,7h3v1h-3zM16,7h1v1h-1zM18,7h1v1h-1zM21,7h1v1h-1zM26,7h1v1h-1zM28,7h4v1h-4zM33,7h1v1h-1zM35,7h3v1h-3zM39,7h1v1h-1zM3,8h1v1h-1zM9,8h1v1h-1zM11,8h2v1h-2zM14,8h2v1h-2zM17,8h1v1h-1zM19,8h1v1h-1zM22,8h1v1h-1zM25,8h1v1h-1zM33,8h1v1h-1zM39,8h1v1h-1zM3,9h7v1h-7zM11,9h1v1h-1zM13,9h1v1h-1zM15,9h1v1h-1zM17,9h1v1h-1zM19,9h1v1h-1zM21,9h1v1h-1zM23,9h1v1h-1zM25,9h1v1h-1zM27,9h1v1h-1zM29,9h1v1h-1zM31,9h1v1h-1zM33,9h7v1h-7zM11,10h1v1h-1zM16,10h6v1h-6zM23,10h4v1h-4zM29,10h1v1h-1zM3,11h1v1h-1zM7,11h1v1h-1zM9,11h5v1h-5zM16,11h2v1h-2zM19,11h3v1h-3zM24,11h2v1h-2zM27,11h1v1h-1zM30,11h1v1h-1zM32,11h5v1h-5zM39,11h1v1h-1zM3,12h1v1h-1zM8,12h1v1h-1zM10,12h1v1h-1zM13,12h2v1h-2zM16,12h2v1h-2zM21,12h1v1h-1zM24,12h3v1h-3zM29,12h4v1h-4zM35,12h1v1h-1zM38,12h1v1h-1zM3,13h1v1h-1zM5,13h1v1h-1zM9,13h4v1h-4zM14,13h5v1h-5zM20,13h2v1h-2zM23,13h1v1h-1zM26,13h1v1h-1zM28,13h4v1h-4zM34,13h1v1h-1zM37,13h1v1h-1zM3,14h1v1h-1zM5,14h2v1h-2zM8,14h1v1h-1zM13,14h2v1h-2zM16,14h1v1h-1zM18,14h7v1h-7zM26,14h2v1h-2zM29,14h2v1h-2zM33,14h1v1h-1zM37,14h2v1h-2zM5,15h3v1h-3zM9,15h1v1h-1zM12,15h1v1h-1zM14,15h2v1h-2zM17,15h1v1h-1zM20,15h1v1h-1zM23,15h5v1h-5zM32,15h3v1h-3zM36,15h4v1h-4zM5,16h1v1h-1zM8,16h1v1h-1zM10,16h1v1h-1zM16,16h6v1h-6zM23,16h1v1h-1zM26,16h1v1h-1zM29,16h2v1h-2zM35,16h2v1h-2zM3,17h4v1h-4zM8,17h2v1h-2zM11,17h3v1h-3zM16,17h4v1h-4zM21,17h1v1h-1zM23,17h1v1h-1zM25,17h2v1h-2zM28,17h4v1h-4zM34,17h4v1h-4zM3,18h1v1h-1zM5,18h4v1h-4zM10,18h4v1h-4zM19,18h2v1h-2zM22,18h1v1h-1zM24,18h4v1h-4zM31,18h2v1h-2zM34,18h2v1h-2zM37,18h1v1h-1zM4,19h3v1h-3zM8,19h2v1h-2zM12,19h1v1h-1zM16,19h2v1h-2zM20,19h1v1h-1zM23,19h3v1h-3zM27,19h1v1h-1zM32,19h3v1h-3zM36,19h4v1h-4zM3,20h4v1h-4zM10,20h2v1h-2zM14,20h1v1h-1zM16,20h2v1h-2zM19,20h3v1h-3zM24,20h1v1h-1zM29,20h3v1h-3zM35,20h1v1h-1zM38,20h1v1h-1zM3,21h1v1h-1zM5,21h1v1h-1zM9,21h1v1h-1zM11,21h1v1h-1zM14,21h2v1h-2zM17,21h1v1h-1zM19,21h3v1h-3zM23,21h2v1h-2zM26,21h2v1h-2zM29,21h2v1h-2zM32,21h2v1h-2zM5,22h1v1h-1zM7,22h2v1h-2zM11,22h3v1h-3zM15,22h1v1h-1zM17,22h1v1h-1zM20,22h2v1h-2zM23,22h3v1h-3zM27,22h1v1h-1zM29,22h1v1h-1zM34,22h2v1h-2zM37,22h2v1h-2zM4,23h1v1h-1zM7,23h1v1h-1zM9,23h1v1h-1zM13,23h1v1h-1zM15,23h2v1h-2zM18,23h3v1h-3zM23,23h5v1h-5zM29,23h2v1h-2zM32,23h3v1h-3zM37,23h1v1h-1zM3,24h1v1h-1zM6,24h2v1h-2zM10,24h5v1h-5zM16,24h1v1h-1zM18,24h2v1h-2zM21,24h1v1h-1zM24,24h1v1h-1zM26,24h1v1h-1zM29,24h4v1h-4zM34,24h2v1h-2zM6,25h2v1h-2zM9,25h2v1h-2zM13,25h2v1h-2zM17,25h2v1h-2zM20,25h1v1h-1zM23,25h1v1h-1zM26,25h1v1h-1zM29,25h2v1h-2zM34,25h4v1h-4zM6,26h1v1h-1zM10,26h1v1h-1zM13,26h1v1h-1zM16,26h2v1h-2zM20,26h5v1h-5zM30,26h1v1h-1zM34,26h2v1h-2zM37,26h2v1h-2zM3,27h1v1h-1zM5,27h2v1h-2zM8,27h5v1h-5zM14,27h5v1h-5zM20,27h1v1h-1zM23,27h3v1h-3zM27,27h1v1h-1zM32,27h3v1h-3zM36,27h3v1h-3zM3,28h1v1h-1zM7,28h1v1h-1zM10,28h1v1h-1zM14,28h1v1h-1zM16,28h1v1h-1zM20,28h1v1h-1zM26,28h2v1h-2zM29,28h2v1h-2zM32,28h1v1h-1zM35,28h2v1h-2zM6,29h2v1h-2zM9,29h1v1h-1zM13,29h1v1h-1zM15,29h5v1h-5zM21,29h1v1h-1zM23,29h4v1h-4zM28,29h4v1h-4zM34,29h2v1h-2zM37,29h1v1h-1zM7,30h1v1h-1zM10,30h2v1h-2zM13,30h1v1h-1zM17,30h5v1h-5zM23,30h2v1h-2zM26,30h2v1h-2zM29,30h2v1h-2zM32,30h1v1h-1zM34,30h2v1h-2zM37,30h1v1h-1zM3,31h5v1h-5zM9,31h2v1h-2zM13,31h2v1h-2zM16,31h2v1h-2zM20,31h1v1h-1zM22,31h4v1h-4zM28,31h1v1h-1zM31,31h7v1h-7zM39,31h1v1h-1zM11,32h1v1h-1zM14,32h1v1h-1zM18,32h1v1h-1zM24,32h1v1h-1zM26,32h1v1h-1zM29,32h3v1h-3zM35,32h1v1h-1zM3,33h7v1h-7zM11,33h2v1h-2zM18,33h1v1h-1zM20,33h1v1h-1zM25,33h5v1h-5zM31,33h1v1h-1zM33,33h1v1h-1zM35,33h1v1h-1zM3,34h1v1h-1zM9,34h1v1h-1zM12,34h2v1h-2zM16,34h3v1h-3zM20,34h1v1h-1zM22,34h1v1h-1zM24,34h1v1h-1zM27,34h1v1h-1zM29,34h1v1h-1zM31,34h1v1h-1zM35,34h3v1h-3zM3,35h1v1h-1zM5,35h3v1h-3zM9,35h1v1h-1zM11,35h1v1h-1zM13,35h2v1h-2zM16,35h1v1h-1zM20,35h1v1h-1zM22,35h2v1h-2zM25,35h3v1h-3zM31,35h9v1h-9zM3,36h1v1h-1zM5,36h3v1h-3zM9,36h1v1h-1zM17,36h1v1h-1zM21,36h1v1h-1zM25,36h2v1h-2zM29,36h1v1h-1zM32,36h3v1h-3zM38,36h2v1h-2zM3,37h1v1h-1zM5,37h3v1h-3zM9,37h1v1h-1zM12,37h1v1h-1zM14,37h5v1h-5zM20,37h2v1h-2zM24,37h1v1h-1zM26,37h3v1h-3zM30,37h1v1h-1zM32,37h2v1h-2zM3,38h1v1h-1zM9,38h1v1h-1zM12,38h1v1h-1zM14,38h3v1h-3zM19,38h2v1h-2zM22,38h1v1h-1zM24,38h3v1h-3zM29,38h1v1h-1zM32,38h1v1h-1zM35,38h4v1h-4zM3,39h7v1h-7zM11,39h2v1h-2zM14,39h1v1h-1zM17,39h2v1h-2zM20,39h1v1h-1zM22,39h1v1h-1zM24,39h2v1h-2zM27,39h1v1h-1zM30,39h1v1h-1zM32,39h1v1h-1zM34,39h1v1h-1zM37,39h3v1h-3z" />
++</vector>
 diff --git a/LadrokSetup/res/drawable/row_selector.xml b/LadrokSetup/res/drawable/row_selector.xml
 new file mode 100644
 index 0000000..bdb6c61
@@ -638,12 +691,58 @@ index 0000000..bdb6c61
 +    </item>
 +    <item android:drawable="@android:color/transparent" />
 +</selector>
+diff --git a/LadrokSetup/res/layout/remote_guidance.xml b/LadrokSetup/res/layout/remote_guidance.xml
+new file mode 100644
+index 0000000..ad03881
+--- /dev/null
++++ b/LadrokSetup/res/layout/remote_guidance.xml
+@@ -0,0 +1,40 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: Apache-2.0 -->
++<!-- Guidance panel of the Remote step: leanback's guidance views (same ids and styles), stacked,
++     with the QR code (guidance_icon) under the text instead of a small icon beside it. -->
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++        android:id="@+id/guidance_container"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:gravity="center_vertical"
++        android:orientation="vertical"
++        android:paddingStart="48dp"
++        android:paddingEnd="32dp">
++
++    <TextView
++            android:id="@+id/guidance_breadcrumb"
++            style="?attr/guidanceBreadcrumbStyle"
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content" />
++
++    <TextView
++            android:id="@+id/guidance_title"
++            style="?attr/guidanceTitleStyle"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content" />
++
++    <TextView
++            android:id="@+id/guidance_description"
++            style="?attr/guidanceDescriptionStyle"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:maxLines="12" />
++
++    <ImageView
++            android:id="@+id/guidance_icon"
++            android:layout_width="200dp"
++            android:layout_height="200dp"
++            android:layout_marginTop="20dp"
++            android:contentDescription="@string/remote_qr_desc"
++            android:scaleType="fitCenter" />
++</LinearLayout>
 diff --git a/LadrokSetup/res/values/strings.xml b/LadrokSetup/res/values/strings.xml
 new file mode 100644
-index 0000000..1b46344
+index 0000000..2ecb4fb
 --- /dev/null
 +++ b/LadrokSetup/res/values/strings.xml
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,34 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<resources>
@@ -661,6 +760,17 @@ index 0000000..1b46344
 +
 +    <string name="timezone_title">Time zone</string>
 +    <string name="timezone_desc">Choose your time zone.</string>
++
++    <string name="remote_title">Phone as a remote</string>
++    <string name="remote_desc">Use an Android phone as the remote of this TV.\n\n1. Scan the code with your phone to download Ladrok Remote, then install it.\n2. In Ladrok Remote, tap Pair a TV and choose %1$s.\n3. Check that both screens show the same code, and confirm on both.</string>
++    <string name="remote_qr_desc">QR code: download Ladrok Remote from GitHub</string>
++    <string name="remote_this_tv">this TV</string>
++    <string name="remote_waiting">Waiting for your phone</string>
++    <string name="remote_pairing">Pairing with %1$s</string>
++    <string name="remote_connected">%1$s is connected. Try the arrows on your phone.</string>
++    <string name="remote_no_bluetooth">This TV has no Bluetooth</string>
++    <string name="remote_skip">Skip</string>
++    <string name="remote_continue">Continue</string>
 +
 +    <string name="confirm_title">All set</string>
 +    <string name="confirm_desc">Language: %1$s\nCountry: %2$s\nTime zone: %3$s\n\nYou can change these later in Settings.</string>
@@ -687,10 +797,10 @@ index 0000000..90697f4
 +</resources>
 diff --git a/LadrokSetup/src/tv/ladrok/setup/BaseStep.java b/LadrokSetup/src/tv/ladrok/setup/BaseStep.java
 new file mode 100644
-index 0000000..8acf40f
+index 0000000..4ef812e
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/BaseStep.java
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,87 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -751,10 +861,15 @@ index 0000000..8acf40f
 +        Set<String> zones = TimeZoneStep.zonesFor(country);
 +        if (zones.size() == 1) {
 +            setup.timeZone = zones.iterator().next();
-+            next(new ConfirmStep());
++            toSummary();
 +        } else {
 +            next(new TimeZoneStep());
 +        }
++    }
++
++    /** The Remote step comes once, before the summary; "Change country" goes straight back. */
++    void toSummary() {
++        next(setup().remoteDone ? new ConfirmStep() : new RemoteStep());
 +    }
 +
 +    @Override
@@ -1099,12 +1214,260 @@ index 0000000..908a792
 +        localeChosen(mItems.get((int) action.getId()).getLocale());
 +    }
 +}
+diff --git a/LadrokSetup/src/tv/ladrok/setup/RemoteStep.java b/LadrokSetup/src/tv/ladrok/setup/RemoteStep.java
+new file mode 100644
+index 0000000..9ec798f
+--- /dev/null
++++ b/LadrokSetup/src/tv/ladrok/setup/RemoteStep.java
+@@ -0,0 +1,242 @@
++/*
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++package tv.ladrok.setup;
++
++import android.bluetooth.BluetoothAdapter;
++import android.bluetooth.BluetoothDevice;
++import android.bluetooth.BluetoothHidHost;
++import android.bluetooth.BluetoothManager;
++import android.bluetooth.BluetoothProfile;
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.os.Bundle;
++import android.util.Log;
++
++import androidx.annotation.NonNull;
++import androidx.leanback.widget.GuidanceStylist;
++import androidx.leanback.widget.GuidanceStylist.Guidance;
++import androidx.leanback.widget.GuidedAction;
++
++import java.time.Duration;
++import java.util.List;
++
++/**
++ * Phone as a remote: a QR code to the newest Ladrok Remote APK on GitHub, and the TV kept
++ * discoverable so the Remote's "Pair a TV" finds it. The pairing code is confirmed in TV
++ * Settings' pairing dialog, and LadrokRemoteHelper makes the first HID connection; this step
++ * only shows how far it got. Skippable.
++ */
++public class RemoteStep extends BaseStep {
++    private static final long STATUS = 0;
++    private static final long NEXT = 1;
++    /** Discoverable for this long at a time; renewed while the step is on screen. */
++    private static final Duration DISCOVERABLE = Duration.ofMinutes(5);
++
++    private BluetoothAdapter mAdapter;
++    private BluetoothHidHost mHid;
++    /** The connected remote, or null. */
++    private BluetoothDevice mConnected;
++    private boolean mResumed;
++
++    @Override
++    public void onCreate(Bundle savedInstanceState) {
++        mAdapter = requireContext().getSystemService(BluetoothManager.class).getAdapter();
++        super.onCreate(savedInstanceState);
++        if (mAdapter == null) return;
++
++        IntentFilter filter = new IntentFilter();
++        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
++        filter.addAction(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED);
++        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
++        filter.addAction(BluetoothHidHost.ACTION_CONNECTION_STATE_CHANGED);
++        // Sent by the Bluetooth app; all protected broadcasts
++        requireContext().registerReceiver(mReceiver, filter, Context.RECEIVER_EXPORTED);
++        // A remote paired before (setup started again) may already be connected.
++        mAdapter.getProfileProxy(requireContext(), mHidListener, BluetoothProfile.HID_HOST);
++        if (!mAdapter.isEnabled()) {
++            mAdapter.enable();
++        }
++    }
++
++    @Override
++    public void onDestroy() {
++        if (mAdapter != null) {
++            requireContext().unregisterReceiver(mReceiver);
++            if (mHid != null) {
++                mAdapter.closeProfileProxy(BluetoothProfile.HID_HOST, mHid);
++                mHid = null;
++            }
++        }
++        super.onDestroy();
++    }
++
++    @Override
++    public void onResume() {
++        super.onResume();
++        mResumed = true;
++        setDiscoverable(true);
++    }
++
++    @Override
++    public void onPause() {
++        // Also while TV Settings' pairing dialog is on top: the phone has found the TV by then.
++        mResumed = false;
++        setDiscoverable(false);
++        super.onPause();
++    }
++
++    @Override
++    @NonNull
++    public Guidance onCreateGuidance(Bundle savedInstanceState) {
++        String tv = mAdapter != null && mAdapter.getName() != null
++                ? mAdapter.getName() : getString(R.string.remote_this_tv);
++        return new Guidance(getString(R.string.remote_title),
++                getString(R.string.remote_desc, tv),
++                getString(R.string.breadcrumb),
++                requireContext().getDrawable(R.drawable.remote_qr));
++    }
++
++    /** The QR code goes under the text, at a size a phone can read from the sofa. */
++    @Override
++    public GuidanceStylist onCreateGuidanceStylist() {
++        return new GuidanceStylist() {
++            @Override
++            public int onProvideLayoutId() {
++                return R.layout.remote_guidance;
++            }
++        };
++    }
++
++    @Override
++    public void onCreateActions(@NonNull List<GuidedAction> actions, Bundle savedInstanceState) {
++        actions.add(new GuidedAction.Builder(requireContext())
++                .id(STATUS)
++                .title(getString(mAdapter == null
++                        ? R.string.remote_no_bluetooth : R.string.remote_waiting))
++                .infoOnly(true)
++                .focusable(false)
++                .build());
++        actions.add(new GuidedAction.Builder(requireContext())
++                .id(NEXT)
++                .title(getString(R.string.remote_skip))
++                .build());
++        mInitialSelection = 1;
++    }
++
++    @Override
++    public void onGuidedActionClicked(GuidedAction action) {
++        if (action.getId() == NEXT) {
++            setup().remoteDone = true;
++            next(new ConfirmStep());
++        }
++    }
++
++    private void setDiscoverable(boolean on) {
++        if (mAdapter == null || !mAdapter.isEnabled()) return;
++        try {
++            if (on) {
++                mAdapter.setDiscoverableTimeout(DISCOVERABLE);
++                mAdapter.setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE);
++            } else if (mAdapter.getScanMode()
++                    == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
++                mAdapter.setScanMode(BluetoothAdapter.SCAN_MODE_CONNECTABLE);
++            }
++        } catch (RuntimeException e) {
++            Log.e(SetupActivity.TAG, "setScanMode failed", e);
++        }
++    }
++
++    private void showStatus(CharSequence status, boolean connected) {
++        GuidedAction statusRow = findActionById(STATUS);
++        GuidedAction nextRow = findActionById(NEXT);
++        if (statusRow == null || nextRow == null) return;
++        statusRow.setTitle(status);
++        nextRow.setTitle(getString(connected ? R.string.remote_continue : R.string.remote_skip));
++        // The rows keep their text while another step is on screen; redraw only a live list.
++        if (getView() != null) {
++            notifyActionChanged(findActionPositionById(STATUS));
++            notifyActionChanged(findActionPositionById(NEXT));
++        }
++    }
++
++    private void showConnected(BluetoothDevice device) {
++        mConnected = device;
++        showStatus(getString(R.string.remote_connected, name(device)), true);
++    }
++
++    private static String name(BluetoothDevice device) {
++        String alias = device.getAlias();
++        return alias != null ? alias : device.getAddress();
++    }
++
++    private final BluetoothProfile.ServiceListener mHidListener =
++            new BluetoothProfile.ServiceListener() {
++        @Override
++        public void onServiceConnected(int profile, BluetoothProfile proxy) {
++            if (!isAdded()) {
++                mAdapter.closeProfileProxy(BluetoothProfile.HID_HOST, proxy);
++                return;
++            }
++            mHid = (BluetoothHidHost) proxy;
++            List<BluetoothDevice> connected = mHid.getConnectedDevices();
++            if (!connected.isEmpty() && mConnected == null) {
++                showConnected(connected.get(0));
++            }
++        }
++
++        @Override
++        public void onServiceDisconnected(int profile) {
++            mHid = null;
++        }
++    };
++
++    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
++        @Override
++        public void onReceive(Context context, Intent intent) {
++            String action = intent.getAction();
++            if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
++                if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
++                        == BluetoothAdapter.STATE_ON && mResumed) {
++                    setDiscoverable(true);
++                }
++                return;
++            }
++            if (BluetoothAdapter.ACTION_SCAN_MODE_CHANGED.equals(action)) {
++                // The discoverable time ran out while the step is still on screen.
++                if (mResumed && intent.getIntExtra(BluetoothAdapter.EXTRA_SCAN_MODE, -1)
++                        != BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
++                    setDiscoverable(true);
++                }
++                return;
++            }
++            BluetoothDevice device =
++                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
++            if (device == null) return;
++            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
++                if (mConnected != null) return;
++                int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE,
++                        BluetoothDevice.ERROR);
++                if (state == BluetoothDevice.BOND_BONDING || state == BluetoothDevice.BOND_BONDED) {
++                    showStatus(getString(R.string.remote_pairing, name(device)), false);
++                } else if (state == BluetoothDevice.BOND_NONE) {
++                    // Cancelled, or the codes didn't match
++                    showStatus(getString(R.string.remote_waiting), false);
++                }
++            } else {
++                int state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE,
++                        BluetoothProfile.STATE_DISCONNECTED);
++                if (state == BluetoothProfile.STATE_CONNECTED) {
++                    showConnected(device);
++                } else if (state == BluetoothProfile.STATE_DISCONNECTED
++                        && device.equals(mConnected)) {
++                    mConnected = null;
++                    showStatus(getString(R.string.remote_waiting), false);
++                }
++            }
++        }
++    };
++}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java b/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java
 new file mode 100644
-index 0000000..b9f2224
+index 0000000..c48b6a0
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/SetupActivity.java
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,117 @@
 +/*
 + * SPDX-License-Identifier: Apache-2.0
 + */
@@ -1132,7 +1495,7 @@ index 0000000..b9f2224
 +import java.util.Locale;
 +
 +/**
-+ * First-boot setup: language -> region -> time zone -> finish. The country comes from the
++ * First-boot setup: language -> region -> time zone -> phone as a remote -> finish. The country comes from the
 + * region; the Country step only shows when it can't, or when asked for on the last step.
 + * Nothing is applied until Finish, so backing out of any step is free.
 + */
@@ -1145,6 +1508,8 @@ index 0000000..b9f2224
 +    Locale locale;
 +    String country;
 +    String timeZone;
++    /** Past the Remote step once; it isn't shown again after "Change country". */
++    boolean remoteDone;
 +
 +    @Override
 +    protected void onCreate(Bundle savedInstanceState) {
@@ -1222,7 +1587,7 @@ index 0000000..b9f2224
 +}
 diff --git a/LadrokSetup/src/tv/ladrok/setup/TimeZoneStep.java b/LadrokSetup/src/tv/ladrok/setup/TimeZoneStep.java
 new file mode 100644
-index 0000000..8bf0b21
+index 0000000..995aaa6
 --- /dev/null
 +++ b/LadrokSetup/src/tv/ladrok/setup/TimeZoneStep.java
 @@ -0,0 +1,89 @@
@@ -1302,7 +1667,7 @@ index 0000000..8bf0b21
 +    @Override
 +    public void onGuidedActionClicked(GuidedAction action) {
 +        setup().timeZone = mIds.get((int) action.getId());
-+        next(new ConfirmStep());
++        toSummary();
 +    }
 +
 +    private static int offset(String id, long now) {
@@ -1317,14 +1682,15 @@ index 0000000..8bf0b21
 +}
 diff --git a/LadrokSetup/tv.ladrok.setup.xml b/LadrokSetup/tv.ladrok.setup.xml
 new file mode 100644
-index 0000000..d38fcb0
+index 0000000..505ba8a
 --- /dev/null
 +++ b/LadrokSetup/tv.ladrok.setup.xml
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,11 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- SPDX-License-Identifier: Apache-2.0 -->
 +<permissions>
 +    <privapp-permissions package="tv.ladrok.setup">
++        <permission name="android.permission.BLUETOOTH_PRIVILEGED"/>
 +        <permission name="android.permission.CHANGE_CONFIGURATION"/>
 +        <permission name="android.permission.MANAGE_USERS"/>
 +        <permission name="android.permission.SET_TIME_ZONE"/>
